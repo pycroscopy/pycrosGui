@@ -412,8 +412,12 @@ class BaseWidget(QMainWindow):
         self.set_dataset()
         if '_relationship' not in self.datasets:
             self.datasets['_relationship'] = {}
+
+        
         for key in self.datasets.keys():
+            
             if isinstance(self.datasets[key], sidpy.Dataset):
+                print(self.datasets[key].data_type)
                 if 'SPECT' in self.datasets[key].data_type.name:
                     self.status.showMessage("opened spectrum " + list(self.datasets.keys())[0])
                     
@@ -421,8 +425,16 @@ class BaseWidget(QMainWindow):
                         self.DataDialog.spectrum_list.clear()
                     if len(self.DataDialog.spectrum_list.findItems(key, Qt.MatchStartsWith))==0:
                         self.DataDialog.spectrum_list.addItems([f'{key}: {self.datasets[key].title}'])
-                           
+
+                elif 'IMAGE_STACK' == self.datasets[key].data_type.name: 
+                    self.status.showMessage("opened image stack " + list(self.datasets.keys())[0])
+                    if len(self.DataDialog.image_list.findItems('None', Qt.MatchExactly))>0:
+                        self.DataDialog.image_list.clear()  
+                    if len(self.DataDialog.image_list.findItems(key, Qt.MatchStartsWith))==0:
+                        self.DataDialog.image_list.addItem(f'{key}: {self.datasets[key].title}')
+                    
                 elif 'IMAGE' in self.datasets[key].data_type.name:
+                    
                     if 'survey' in self.datasets[key].title.lower():
                         if len(self.DataDialog.survey_list.findItems('None', Qt.MatchExactly))>0:
                             self.DataDialog.survey_list.clear()  
@@ -436,7 +448,7 @@ class BaseWidget(QMainWindow):
             else:
                 if '_' != key[0]:
                     print('Did not recognize file type: ', f'{key}')
-        self.setWindowTitle('Quantifit version '+str(1) +'qt serial #: 1 - ')# +tags['filename'])
+        self.setWindowTitle('PyCrosGUI version '+str(1) +' serial #: 1 - ')# +tags['filename'])
         
     def save_file(self, filename=None):
         import warnings
@@ -469,6 +481,7 @@ class BaseWidget(QMainWindow):
         
     def plotUpdate(self,key = 'All'):
         self.plot_features = {} 
+        self.dataset = self.datasets[self.main]
         if not isinstance(self.dataset, sidpy.Dataset):
             return
        
@@ -486,7 +499,7 @@ class BaseWidget(QMainWindow):
                     cursor_values = self.cursor.getRegion()
             plt.clear()
             spectrum, label =self.get_spectrum(self.main)
-            ene = np.array(self.datasets[self.main].get_spectral_dims(return_axis=True)[0])
+            ene = np.array(self.dataset.get_spectral_dims(return_axis=True)[0])
             energy_scale = np.append(ene, ene[-1])
             curve = pg.PlotCurveItem(np.array(energy_scale), spectrum, 
                                         stepMode=True, fillLevel=0,
@@ -496,7 +509,7 @@ class BaseWidget(QMainWindow):
                                                     
             plt.addItem(curve)
             plt.addLine(y=0, pen='gray')
-            plt.setWindowTitle(f'Quantifit {self.version}')
+            plt.setWindowTitle(f'PycrosGUI {self.version}')
             if self.intensity_scale == 1.0:
                 plt.setLabel('left', 'intensity', units='counts')
             else:
@@ -510,7 +523,6 @@ class BaseWidget(QMainWindow):
                 spectrum, label = self.get_spectrum(pos)
                 curve = pg.PlotCurveItem(np.array(energy_scale), spectrum, 
                                             pen = colors[i%10], stepMode=True, 
-                                    
                                             padding = 0, name=label) #, name=memtags['name'])
                 plt.addItem(curve)
 
@@ -526,28 +538,37 @@ class BaseWidget(QMainWindow):
                 self.cursor.sigRegionChangeFinished.connect(self.set_cursor_values)
                 plt.addItem(self.cursor)
                 self.tab.setCurrentWidget(self.plot1)
-        elif self.datasets[self.main].data_type.name == 'IMAGE':
+        elif 'IMAGE' in self.datasets[self.main].data_type.name:
+            
+            if 'IMAGE_STACK' in self.datasets[self.main].data_type.name:
+                self.plotParamWindow3.setImage(np.array(self.dataset), xvals=np.linspace(1., self.dataset.shape[0], self.dataset.shape[0]))
+            else:
+                self.plotParamWindow3.setImage(np.array(self.dataset))
+
             self.img = self.plotParamWindow3.getImageItem()
-            self.img.setImage(np.array(self.datasets[self.main]))
             self.view = self.plotParamWindow3.getView()
             self.histo = self.plotParamWindow3.ui.histogram
             self.view.setAspectLocked(lock=True, ratio=1)
-            x =self.datasets[self.main].x
-            y =self.datasets[self.main].y
+            dims = self.dataset.get_dimensions_by_type(sidpy.DimensionType.SPATIAL, return_axis=True)
+            if len(dims) <1:
+                dims  = self.dataset.get_dimensions_by_type(sidpy.DimensionType.RECIPROCAL, return_axis=True)
+            print('dims', dims, self.dataset.shape)
+            x =dims[0]
+            y =dims[1]
             
             tr = QTransform()  # prepare ImageItem transformation:
             tr.scale(x[1]-x[0], y[1]-y[0])       # scale horizontal and vertical axes
             self.img.setTransform(tr) 
             self.img.setRect(x[0], y[0], x[-1]-x[0], y[-1]-y[0])
-            self.roi = self.plotParamWindow3.getRoiPlot()
+            # self.roi = self.plotParamWindow3.getRoiPlot()
 
-            self.plotParamWindow3.roi.setSize((1.000000, 1.000000))
+            # self.plotParamWindow3.roi.setSize((2.000000, 2.000000))
     
-            scale = pg.ScaleBar(size=10, pen = 'w', suffix = 'nm')
+            scale = pg.ScaleBar(size=10, pen = 'w', suffix = x.units)
             scale.setParentItem(self.view)
             scale.anchor((1, 1), (1, 1), offset=(-20, -20))
             
-            #self.plotParamWindow3.autoRange()
+            # self.plotParamWindow3.autoRange()
             self.tab.setCurrentWidget(self.plot3)
     
     def plot_additional_features(self, plt):
