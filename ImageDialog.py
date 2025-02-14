@@ -58,7 +58,7 @@ class ImageDialog(QWidget):
         self.regButton.setText("Registration")
         layout.addWidget(self.regButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
-        # self.scaleButton.clicked.connect(self.cursor2energy_scale)
+        self.scaleButton.clicked.connect(self.rigi_registration)
         
         row += 1
         self.rigid_regButton = QPushButton()
@@ -119,12 +119,6 @@ class ImageDialog(QWidget):
         
         return layout
         
-    def set_dataset(self):
-        item_text = self.mainList.currentText()
-        self.parent.main = item_text.split(':')[0]
-        self.parent.datasets['_relationship']['image'] = self.parent.main
-        self.parent.set
-        self.update_sidebar()
 
     def update_sidebar(self):
         if '_relationship' not in self.parent.datasets:
