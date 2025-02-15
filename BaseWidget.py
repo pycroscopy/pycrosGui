@@ -286,7 +286,6 @@ class BaseWidget(QMainWindow):
             y = int(y+0.5)
         else: 
             return
-        print(x,y)
         modifiers = QApplication.keyboardModifiers()
         if modifiers == Qt.ShiftModifier:
             self.add_si_spectrum.append([x, y])
@@ -323,22 +322,8 @@ class BaseWidget(QMainWindow):
     
     def updateTab(self,num):
         self.tabCurrent = num
-        print('tab' ,num)
-        if num <2:
-            pass
-            #self.SelectDialog.update()
-        if num > 2:
-            self.tags['images']['current'] = num -3
-            SiTab = -1
-            if 'SI' in self.tags['QF']:
-                if 'SIimageTab' in self.tags['QF']['SI']:
-                    SiTab = self.tags['QF']['SI']['SIimageTab']
-                    print('SiTab', SiTab)
-            if self.tags['images']['current'] != SiTab:
-                
-                self.ImageDialog.update()
-                self.ProbeDialog.update()
-                      
+        # print('tab' ,num)
+        
     def accept(self):       
         self.close()
     
@@ -417,7 +402,6 @@ class BaseWidget(QMainWindow):
         for key in self.datasets.keys():
             
             if isinstance(self.datasets[key], sidpy.Dataset):
-                print(self.datasets[key].data_type)
                 if 'SPECT' in self.datasets[key].data_type.name:
                     self.status.showMessage("opened spectrum " + list(self.datasets.keys())[0])
                     
@@ -541,7 +525,26 @@ class BaseWidget(QMainWindow):
         elif 'IMAGE' in self.datasets[self.main].data_type.name:
             
             if 'IMAGE_STACK' in self.datasets[self.main].data_type.name:
-                self.plotParamWindow3.setImage(np.array(self.dataset), xvals=np.linspace(1., self.dataset.shape[0], self.dataset.shape[0]))
+                dims = self.dataset.get_dimensions_by_type(sidpy.DimensionType.TEMPORAL, return_axis=True)
+                if len(dims)>1:
+                    print('old dm3 dataset')
+                    data_set = sidpy.Dataset.from_array(np.swapaxes(np.array(self.dataset),2, 0), 'stack')
+                    data_set.set_dimension(0, sidpy.Dimension(np.arange(data_set.shape[0]),
+                                                              'z', units='frame', quantity='frame',
+                                                              dimension_type='temporal'))
+
+                    data_set.set_dimension(1, sidpy.Dimension(np.arange(data_set.shape[1]), 
+                                                              name='x', units='nm', quantity='Length',
+                                                              dimension_type='spatial'))
+                    data_set.set_dimension(2, sidpy.Dimension(np.arange(data_set.shape[2]),
+                                                              'y', units='nm', quantity='Length',
+                                                              dimension_type='spatial'))
+
+                    data_set.data_type = 'image_stack'
+                    data_set.title = self.dataset.title
+                    self.dataset = data_set
+                    dims = [data_set.z]
+                self.plotParamWindow3.setImage(np.array(self.dataset), xvals=dims[0].values)
             else:
                 self.plotParamWindow3.setImage(np.array(self.dataset))
 
@@ -552,7 +555,7 @@ class BaseWidget(QMainWindow):
             dims = self.dataset.get_dimensions_by_type(sidpy.DimensionType.SPATIAL, return_axis=True)
             if len(dims) <1:
                 dims  = self.dataset.get_dimensions_by_type(sidpy.DimensionType.RECIPROCAL, return_axis=True)
-            print('dims', dims, self.dataset.shape)
+            
             x =dims[0]
             y =dims[1]
             
@@ -615,7 +618,6 @@ class BaseWidget(QMainWindow):
                         selection.append(slice(0, 1))
                 
                 spectrum = np.array(self.datasets[key][tuple(selection)].mean(axis=tuple(image_dims)))
-                print('spectrum', spectrum[:10], selection, x, bin_y)
                 label = f" {self.datasets[key].title} {x}, {y}"
         else:
             spectrum = self.datasets[key] 

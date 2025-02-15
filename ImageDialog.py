@@ -58,25 +58,25 @@ class ImageDialog(QWidget):
         self.regButton.setText("Registration")
         layout.addWidget(self.regButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
-        self.scaleButton.clicked.connect(self.rigi_registration)
+        #self.scaleButton.clicked.connect(self.rigi_registration)
         
         row += 1
         self.rigid_regButton = QPushButton()
         self.rigid_regButton.setText("Rigid Reg.")
         self.rigid_regButton.setCheckable(True)
         layout.addWidget(self.rigid_regButton,  row, 0)
-        #self.rigid_regButton.clicked.connect(self.rigid_registration)
+        self.rigid_regButton.clicked.connect(self.rigid_registration)
         
         self.demon_regButton = QPushButton()
         self.demon_regButton.setText("Demon Reg.")
         self.demon_regButton.setCheckable(True)
-        layout.addWidget(self.rigid_regButton,  row, 1)
-        #self.demon_regButton.clicked.connect(self.demon_registration)
+        layout.addWidget(self.demon_regButton,  row, 1)
+        self.demon_regButton.clicked.connect(self.demon_registration)
         
         self.all_regButton = QPushButton()
         self.all_regButton.setText("Both Reg.")
         self.all_regButton.setCheckable(True)
-        layout.addWidget(self.all_regButton,  row, 1)
+        layout.addWidget(self.all_regButton,  row, 2)
         #self.all_regButton.clicked.connect(self.all_registration)
         
         row += 1
@@ -116,6 +116,23 @@ class ImageDialog(QWidget):
         layout.addWidget(self.atom_sizeEdit,row,1)
         layout.addWidget(self.atom_sizeUnit,row,2)
         
+        row += 1
+        self.decobButton = QPushButton()
+        self.decobButton.setText("LR Decon")
+        self.decobButton.setCheckable(True)
+        layout.addWidget(self.decobButton,  row, 0)
+        self.decobButton.clicked.connect(self.sum_stack)
+        
+        self.atomsButton = QPushButton()
+        self.atomsButton.setText("Find Atoms")
+        self.atomsButton.setCheckable(True)
+        layout.addWidget(self.atomsButton,  row, 1)
+        self.atomsButton.clicked.connect(self.average_stack)
+        
+        self.refineButton = QPushButton()
+        self.refineButton.setText("Refine Atoms")
+        self.refineButton.setCheckable(True)
+        layout.addWidget(self.refineButton,  row, 2)
         
         return layout
         
@@ -157,8 +174,6 @@ class ImageDialog(QWidget):
             self.atom_sizeUnit.setText(x.units)
             self.atom_sizeLabel.setText('Atom size')    
         
-            
-        
     def update_image_dataset(self, value=0):
         self.key = self.mainList.currentText().split(':')[0]
         if self.key not in self.parent.datasets.keys():
@@ -185,39 +200,33 @@ class ImageDialog(QWidget):
             dims = self.parent.dataset.get_dimensions_by_type(sidpy.DimensionType.TEMPORAL, return_axis=False)
             self.parent.datasets[f'Average-{self.parent.dataset.title}'] = self.parent.dataset.mean(axis=dims[0])
             self.parent.datasets['_relationship'][f'Average-{self.parent.main}'] = f'Average-{self.parent.dataset.title}'
-            self.parent.datasets[f'Average-{self.dataset.title}'].data_type = 'image'
+            self.parent.datasets[f'Average-{self.parent.dataset.title}'].data_type = 'image'
             self.parent.datasets['_relationship']['image'] =f'Average-{self.dataset.title}'
             self.update_sidebar()
            
     
-    def set_intensity_scale(self, checked):
-        self.parent.intensity_scale = 1.0
-        if checked:
-            if 'experiment' in self.parent.dataset.metadata:
-                if 'flux_ppm' in self.parent.dataset.metadata['experiment']:
-                    if 'SPEC' in self.parent.dataset.data_type.name:
-                       energy_scale = self.parent.dataset.get_spectral_dims(return_axis=True)[0]
-                       atom_size = energy_scale[1]-energy_scale[0]
-                    else:
-                        atom_size = 1.0
-                        
-                    self.parent.intensity_scale = atom_size/self.parent.dataset.metadata['experiment']['flux_ppm']
-        self.parent.plotUpdate()
+    def rigid_registration(self, checked):
+        if self.parent.dataset.data_type.name == 'IMAGE_STACK':
+            key =f'RigidReg-{self.parent.main}'
+            name = f'RigidReg-{self.dataset.title}'
+            self.parent.datasets[key] = image_tools.rigid_registration(self.parent.dataset)
+            self.parent.datasets['_relationship'][key] = key
+            self.parent.datasets[key].data_type = 'IMAGE_STACK'
+            self.parent.datasets[key].title = name
+            self.parent.datasets['_relationship']['image'] = key
+            self.update_sidebar()
 
-    def get_shift(self,  value=0):
-        if 'low_loss' in self.parent.datasets['_relationship']:
-            low_loss = self.parent.datasets[self.parent.datasets['_relationship']['low_loss']]
-
-            self.parent.datasets['shifted_low_loss']  = eels_tools.align_zero_loss(low_loss)
-            self.parent.datasets['shifted_low_loss'].title = self.parent.dataset.title + '_shifted'
-            self.parent.datasets['_relationship']['low_loss'] = 'shifted_low_loss'
-            self.updateInfo()
+    def demon_registration(self,  value=0):
+        if self.parent.dataset.data_type.name == 'IMAGE_STACK':
+            key =f'DemonReg-{self.parent.main}'
+            name = f'DemonReg-{self.dataset.title}'
+            self.parent.datasets[key] = image_tools.demon_registration(self.parent.dataset)
+            self.parent.datasets['_relationship'][key] = key
+            self.parent.datasets[key].data_type = 'IMAGE_STACK'
+            self.parent.datasets[key].title = name
+            self.parent.datasets['_relationship']['image'] = key
+            self.update_sidebar()
            
-        if 'low_loss' in self.parent.datasets['_relationship']:
-            if 'zero_loss' in self.parent.datasets[self.parent.datasets['_relationship']['low_loss']].metadata:
-                if 'shifted' in self.parent.datasets[self.parent.datasets['_relationship']['low_loss']].metadata['zero_loss'].keys():
-                    self.set_shiftButton.setDisabled(False)
-    
     def shift_spectrum(self,  value=0):
         shifts = self.parent.dataset.shape
         if 'low_loss' in self.parent.datasets['_relationship']:
