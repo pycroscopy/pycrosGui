@@ -8,6 +8,9 @@
 # This Base Widget is to be extended for pycroscopy GUIs
 # running under python 3 using pyqt, and pyQT5 as GUI mashine
 # ################################################################
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -31,7 +34,19 @@ import sidpy
 
 from DataDialog import DataDialog
 
-class BaseWidget(QMainWindow):    
+class ImageView(pg.ImageView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        self.ui.roiBtn.setChecked(True)
+        self.roiClicked()
+
+    def roiChanged(self):
+        super().roiChanged()
+        for i in range(len(self.roiCurves)):
+            self.roiCurves[i].setPen('black')
+    
+class BaseWidget(QtWidgets.QMainWindow):    
     def __init__(self, sidebar=[], filename=None):
         super().__init__()
         self.version = '2025-1-1'
@@ -76,13 +91,13 @@ class BaseWidget(QMainWindow):
         # =============== Definition of the Main Window LayOut =======================
         # ============================================================================
         # Widget that contains the Plot and toolbar
-        centralWidget = QWidget ()
+        centralWidget = QtWidgets.QWidget()
         self.centralWidget = centralWidget
         
         #============= Definition of Figure and Dialog Windows  for Parameters =================
         
         self.height = 450
-        screen = QDesktopWidget().screenGeometry()
+        screen = QtWidgets.QDesktopWidget().screenGeometry()
         self.height = screen.height() 
         self.width = screen.width() 
 
@@ -93,37 +108,37 @@ class BaseWidget(QMainWindow):
         # Creating an instance of the Figure
         self.plotParamWindow  = pg.PlotWidget()
         self.plotParamWindow2 = pg.PlotWidget()
-        self.plotParamWindow3 = pg.ImageView()
+        self.plotParamWindow3 = ImageView()
 
         self.plotParamWindow.plot((0,1),(0,1))
         
-        plotLayout  = QVBoxLayout()
-        plotLayout1 = QVBoxLayout()
-        plotLayout3 = QVBoxLayout()
+        plotLayout  = QtWidgets.QVBoxLayout()
+        plotLayout1 = QtWidgets.QVBoxLayout()
+        plotLayout3 = QtWidgets.QVBoxLayout()
 
-        validfloat = QDoubleValidator()
-        top_layout = QHBoxLayout()
-        self.left_cursor_label = QLabel("Cursor Start")
-        self.left_cursor_value = QLineEdit(" 100.0")
+        validfloat = QtGui.QDoubleValidator()
+        top_layout = QtWidgets.QHBoxLayout()
+        self.left_cursor_label = QtWidgets.QLabel("Cursor Start")
+        self.left_cursor_value = QtWidgets.QLineEdit(" 100.0")
         self.left_cursor_value.setValidator(validfloat)
         top_layout.addWidget(self.left_cursor_label)
         top_layout.addWidget(self.left_cursor_value)
-        self.right_cursor_label = QLabel("End")
-        self.right_cursor_value = QLineEdit(" 100.0")
+        self.right_cursor_label = QtWidgets.QLabel("End")
+        self.right_cursor_value = QtWidgets.QLineEdit(" 100.0")
         self.right_cursor_value.setValidator(validfloat)
         top_layout.addWidget(self.right_cursor_label)
         top_layout.addWidget(self.right_cursor_value)
         
-        top_widget = QWidget()
+        top_widget = QtWidgets.QWidget()
         top_widget.setLayout(top_layout)
-        self.plot1 = QWidget()
+        self.plot1 = QtWidgets.QWidget()
 
         plotLayout1.addWidget(top_widget)        
         plotLayout1.addWidget(self.plotParamWindow)        
         self.plot1.setLayout(plotLayout1)
 
-        self.plot2 = QWidget()
-        self.si_layout = QGridLayout()
+        self.plot2 = QtWidgets.QWidget()
+        self.si_layout = QtWidgets.QGridLayout()
         self.plot2.setLayout(self.si_layout)
         self.si_layout.setSpacing(0)
 
@@ -147,11 +162,11 @@ class BaseWidget(QMainWindow):
         self.si_img_view.addItem(self.si_roi)
         self.si_roi.setZValue(10)
 
-        self.plot3 = QWidget()
+        self.plot3 = QtWidgets.QWidget()
         plotLayout3.addWidget(self.plotParamWindow3)        
         self.plot3.setLayout(plotLayout3)
         
-        self.tab = QTabWidget()
+        self.tab = QtWidgets.QTabWidget()
         self.tab.addTab(self.plot1, 'Spectrum')
         self.tab.addTab(self.plot2, 'Spectral Image')
         self.tab.addTab(self.plot3, 'Image')
@@ -176,26 +191,26 @@ class BaseWidget(QMainWindow):
         #        Definition of the Dock Widget:         
         #  that works as a container for the dialog widget
         
-        self.DataWidget = QDockWidget("Datasets ", self)
+        self.DataWidget = QtWidgets.QDockWidget("Datasets ", self)
         self.DataDialog = DataDialog(self)
         self.DataWidget.setWidget(self.DataDialog)# Add the dock to the main window
         
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.DataWidget)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.DataWidget)
         
         #============= Definition of Right QDialog  =================
         # 
         #        Definition of the Dock Widget:         
         #   that works as a container for the dialog widget
 
-        self.SelectWidget = QDockWidget("Select", self)
+        self.SelectWidget = QtWidgets.QDockWidget("Select", self)
         # Add the dock to the main window
-        self.addDockWidget(Qt.RightDockWidgetArea, self.SelectWidget)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.SelectWidget)
         
         #================== File menubar and toolbar ==================        
         # Exit the aplication
 
         # exit option for the menu bar File menu
-        self.exit = QAction('Exit', self)
+        self.exit = QtWidgets.QAction('Exit', self)
         self.exit.setShortcut('Ctrl+Q')
         # message for the status bar if mouse is over Exit
         self.exit.setStatusTip('Exit program')
@@ -204,18 +219,18 @@ class BaseWidget(QMainWindow):
 
         
         #File
-        openFile = QAction('Open', self)
+        openFile = QtWidgets.QAction('Open', self)
         openFile.setShortcut('Ctrl+O')
         openFile.setStatusTip('Open File')
         openFile.triggered.connect(self.open_file)
 
         # Save File
-        saveFile = QAction('Save', self)
+        saveFile = QtWidgets.QAction('Save', self)
         saveFile.setShortcut('Ctrl+S')
         saveFile.setStatusTip('Save File')
         saveFile.triggered.connect(self.save_file)
 
-        self.vLegend = QAction('Legend', self)
+        self.vLegend = QtWidgets.QAction('Legend', self)
         self.vLegend.setShortcut('Ctrl+L')
         self.vLegend.setStatusTip('Switches Legend Display off and on')
         self.vLegend.setCheckable (True)
@@ -243,7 +258,7 @@ class BaseWidget(QMainWindow):
             if key == '-':
                 view.addSeparator()
             else:
-                self.vImage.append( QAction(key, self))
+                self.vImage.append( QtWidgets.QAction(key, self))
                 #self.vLegend.setShortcut('Ctrl+L')
                 #self.vLegend.setStatusTip('Switches Legend Display off and on')
                 self.vImage[i].setCheckable (True)
@@ -286,10 +301,10 @@ class BaseWidget(QMainWindow):
             y = int(y+0.5)
         else: 
             return
-        modifiers = QApplication.keyboardModifiers()
-        if modifiers == Qt.ShiftModifier:
+        modifiers = QtGui.QApplication.keyboardModifiers()
+        if modifiers == QtCore.Qt.ShiftModifier:
             self.add_si_spectrum.append([x, y])
-        elif modifiers == Qt.ControlModifier:
+        elif modifiers == QtCore.Qt.ControlModifier:
             self.add_si_spectrum = []
             self.x = x
             self.y = y
@@ -335,7 +350,7 @@ class BaseWidget(QMainWindow):
         
     def on_about(self):
         msg = f"pycrosGUI version {self.version}qt \n part of the pycrosocpy ecosystem\n by Gerd Duscher 2025 "
-        QMessageBox.about(self, "About pycrosGUI", msg)
+        QtGui.QMessageBox.about(self, "About pycrosGUI", msg)
 
     def add_actions(self, target, actions):
         for action in actions:
@@ -347,9 +362,9 @@ class BaseWidget(QMainWindow):
     def create_action(  self, text, slot=None, shortcut=None, 
                         icon=None, tip=None, checkable=False, 
                         signal="triggered()"):
-        action = QAction(text, self)
+        action = QtWidgets.QAction(text, self)
         if icon is not None:
-            action.setIcon(QIcon(":/%s.png" % icon))
+            action.setIcon(QtWidgets.QIcon(":/%s.png" % icon))
         if shortcut is not None:
             action.setShortcut(shortcut)
         if tip is not None:
@@ -397,37 +412,32 @@ class BaseWidget(QMainWindow):
         self.set_dataset()
         if '_relationship' not in self.datasets:
             self.datasets['_relationship'] = {}
-
         
         for key in self.datasets.keys():
-            
             if isinstance(self.datasets[key], sidpy.Dataset):
                 if 'SPECT' in self.datasets[key].data_type.name:
                     self.status.showMessage("opened spectrum " + list(self.datasets.keys())[0])
                     
-                    if len(self.DataDialog.spectrum_list.findItems('None', Qt.MatchExactly))>0:
+                    if len(self.DataDialog.spectrum_list.findItems('None', QtCore.Qt.MatchExactly))>0:
                         self.DataDialog.spectrum_list.clear()
-                    if len(self.DataDialog.spectrum_list.findItems(key, Qt.MatchStartsWith))==0:
+                    if len(self.DataDialog.spectrum_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
                         self.DataDialog.spectrum_list.addItems([f'{key}: {self.datasets[key].title}'])
-
                 elif 'IMAGE_STACK' == self.datasets[key].data_type.name: 
                     self.status.showMessage("opened image stack " + list(self.datasets.keys())[0])
-                    if len(self.DataDialog.image_list.findItems('None', Qt.MatchExactly))>0:
+                    if len(self.DataDialog.image_list.findItems('None', QtCore.Qt.MatchExactly))>0:
                         self.DataDialog.image_list.clear()  
-                    if len(self.DataDialog.image_list.findItems(key, Qt.MatchStartsWith))==0:
+                    if len(self.DataDialog.image_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
                         self.DataDialog.image_list.addItem(f'{key}: {self.datasets[key].title}')
-                    
                 elif 'IMAGE' in self.datasets[key].data_type.name:
-                    
                     if 'survey' in self.datasets[key].title.lower():
-                        if len(self.DataDialog.survey_list.findItems('None', Qt.MatchExactly))>0:
+                        if len(self.DataDialog.survey_list.findItems('None', QtCore.Qt.MatchExactly))>0:
                             self.DataDialog.survey_list.clear()  
-                        if len(self.DataDialog.survey_list.findItems(key, Qt.MatchStartsWith))==0:
+                        if len(self.DataDialog.survey_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
                             self.DataDialog.survey_list.addItem(f'{key}: {self.datasets[key].title}')
                     else:
-                        if len(self.DataDialog.image_list.findItems('None', Qt.MatchExactly))>0:
+                        if len(self.DataDialog.image_list.findItems('None', QtCore.Qt.MatchExactly))>0:
                             self.DataDialog.image_list.clear()  
-                        if len(self.DataDialog.image_list.findItems(key, Qt.MatchStartsWith))==0:
+                        if len(self.DataDialog.image_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
                             self.DataDialog.image_list.addItem(f'{key}: {self.datasets[key].title}')
             else:
                 if '_' != key[0]:
@@ -532,15 +542,16 @@ class BaseWidget(QMainWindow):
                     data_set.set_dimension(0, sidpy.Dimension(np.arange(data_set.shape[0]),
                                                               'z', units='frame', quantity='frame',
                                                               dimension_type='temporal'))
-
                     data_set.set_dimension(1, sidpy.Dimension(np.arange(data_set.shape[1]), 
                                                               name='x', units='nm', quantity='Length',
                                                               dimension_type='spatial'))
                     data_set.set_dimension(2, sidpy.Dimension(np.arange(data_set.shape[2]),
                                                               'y', units='nm', quantity='Length',
                                                               dimension_type='spatial'))
-
                     data_set.data_type = 'image_stack'
+                    data_set.metadata['experiment'] = {'acceleration_voltage': 200000,
+                                                       'convergence_angle': 30,
+                                                       'collection_angle': 50}
                     data_set.title = self.dataset.title
                     self.dataset = data_set
                     dims = [data_set.z]
@@ -555,11 +566,12 @@ class BaseWidget(QMainWindow):
             dims = self.dataset.get_dimensions_by_type(sidpy.DimensionType.SPATIAL, return_axis=True)
             if len(dims) <1:
                 dims  = self.dataset.get_dimensions_by_type(sidpy.DimensionType.RECIPROCAL, return_axis=True)
-            
+            if len(dims) <1:
+                return
             x =dims[0]
             y =dims[1]
             
-            tr = QTransform()  # prepare ImageItem transformation:
+            tr = QtGui.QTransform()  # prepare ImageItem transformation:
             tr.scale(x[1]-x[0], y[1]-y[0])       # scale horizontal and vertical axes
             self.img.setTransform(tr) 
             self.img.setRect(x[0], y[0], x[-1]-x[0], y[-1]-y[0])
@@ -572,6 +584,7 @@ class BaseWidget(QMainWindow):
             scale.anchor((1, 1), (1, 1), offset=(-20, -20))
             
             # self.plotParamWindow3.autoRange()
+            self.plot_additional_features(self.view)
             self.tab.setCurrentWidget(self.plot3)
     
     def plot_additional_features(self, plt):

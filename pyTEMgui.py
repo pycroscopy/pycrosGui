@@ -12,6 +12,10 @@
 # LowLoss, CoreLoss, and PeakFit dialogs work on spectra and spectral images
 #
 #################################################################
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -51,7 +55,7 @@ class MainWidget(BaseWidget):
         self.InfoWidget.setFeatures(PyQt5.QtWidgets.QDockWidget.DockWidgetMovable |
                               PyQt5.QtWidgets.QDockWidget.DockWidgetFloatable)
         self.InfoWidget.setWidget(self.InfoDialog)# Add the dock to the main window
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.InfoWidget)
+        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.InfoWidget)
         self.tabifyDockWidget(self.DataWidget, self.InfoWidget) 
         self.InfoWidget.visibilityChanged.connect(self.InfoDialog.updateInfo)
 
@@ -73,9 +77,9 @@ class MainWidget(BaseWidget):
                               PyQt5.QtWidgets.QDockWidget.DockWidgetFloatable)
         self.PeakFitWidget.setWidget(self.PeakFitDialog)# Add the dock to the main window
         
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.LowLossWidget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.CoreLossWidget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.PeakFitWidget)
+        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.LowLossWidget)
+        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.CoreLossWidget)
+        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.PeakFitWidget)
         
         self.tabifyDockWidget(self.InfoWidget, self.LowLossWidget)
         self.tabifyDockWidget(self.LowLossWidget, self.CoreLossWidget)
@@ -146,11 +150,11 @@ class MainWidget(BaseWidget):
 
 def main(args=[]):
     global app
-    app=QApplication(args)
+    app=QtWidgets.QApplication(args)
     f=MainWidget()        
     f.show()
-    app.setStyle(QStyleFactory.create("Cleanlooks"))
-    app.setPalette(QApplication.style().standardPalette())
+    app.setStyle(QtWidgets.QStyleFactory.create("Cleanlooks"))
+    app.setPalette(QtWidgets.QApplication.style().standardPalette())
     app.exec()
 
 

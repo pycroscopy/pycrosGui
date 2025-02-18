@@ -18,6 +18,10 @@
 #           ** changed to reflect Libra and pA ** Nov 2012
 #       
 #####################################################################
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -32,7 +36,7 @@ from pyTEMlib import eels_tools
 
 from periodic_table import PeriodicTable
 
-class CoreLossDialog(QWidget):
+class CoreLossDialog(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(CoreLossDialog, self).__init__(parent)
     
@@ -55,12 +59,12 @@ class CoreLossDialog(QWidget):
         self.periodic_table = PeriodicTable(self)
 
     def get_sidbar(self): 
-        validfloat = QDoubleValidator()
-        validint = QIntValidator()        
+        validfloat = QtGui.QDoubleValidator()
+        validint = QtGui.QIntValidator()        
         
-        layout = QGridLayout()
+        layout = QtWidgets.QGridLayout()
         row = 0 
-        self.mainList = QComboBox(self)
+        self.mainList = QtWidgets.QComboBox(self)
         self.mainList.addItem("None")
         layout.addWidget(self.mainList,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)  
@@ -68,7 +72,7 @@ class CoreLossDialog(QWidget):
         self.mainList.activated[str].connect(self.update_cl_dataset)
         
         row += 1
-        self.fit_areaButton = QPushButton()
+        self.fit_areaButton = QtWidgets.QPushButton()
         self.fit_areaButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
         self.fit_areaButton.setText("Fit Area")
         layout.addWidget(self.fit_areaButton,  row,0, 1, 3)
@@ -77,26 +81,26 @@ class CoreLossDialog(QWidget):
         self.fit_areaButton.clicked.connect(self.set_fit_area)
         
         row += 1
-        self.fit_startLabel = QLabel("Start Fit")
-        self.fit_startEdit = QLineEdit(" 3.0")
+        self.fit_startLabel = QtWidgets.QLabel("Start Fit")
+        self.fit_startEdit = QtWidgets.QLineEdit(" 3.0")
         # self.fit_startEdit.setValidator(validfloat)
         #self.fit_startEdit.editingFinished.connect(self.on_drude_start_enter)
-        self.fit_startUnit = QLabel("eV")
+        self.fit_startUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.fit_startLabel,row,0)
         layout.addWidget(self.fit_startEdit,row,1)
         layout.addWidget(self.fit_startUnit,row,2)
 
         row += 1
-        self.fit_endLabel = QLabel("End Fit")
-        self.fit_endEdit = QLineEdit(" 30.0")
+        self.fit_endLabel = QtWidgets.QLabel("End Fit")
+        self.fit_endEdit = QtWidgets.QLineEdit(" 30.0")
         self.fit_endEdit.setValidator(validfloat)
-        self.fit_endUnit = QLabel("eV")
+        self.fit_endUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.fit_endLabel,row,0)
         layout.addWidget(self.fit_endEdit,row,1)
         layout.addWidget(self.fit_endUnit,row,2)
 
         row += 1
-        self.elementsButton = QPushButton()
+        self.elementsButton = QtWidgets.QPushButton()
         self.elementsButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
         self.elementsButton.setText("Elements")
         layout.addWidget(self.elementsButton,  row,0, 1, 3)
@@ -104,72 +108,72 @@ class CoreLossDialog(QWidget):
         self.elementsButton.clicked.connect(self.find_elements)
        
         row +=1
-        self.edgeList = QComboBox(self)
+        self.edgeList = QtWidgets.QComboBox(self)
         self.edgeList.addItem("Edge 1")
         self.edgeList.addItem("add Edge") 
         layout.addWidget(self.edgeList,  row, 1)
         self.edgeList.activated[str].connect(self.update)
 
         row += 1
-        self.element_zLabel = QLabel("Element")
-        self.element_zEdit = QLineEdit(" 0")
+        self.element_zLabel = QtWidgets.QLabel("Element")
+        self.element_zEdit = QtWidgets.QLineEdit(" 0")
         self.element_zEdit.setValidator(validint)
         self.element_zEdit.editingFinished.connect(self.update)
-        self.element_zUnit = QLabel("H")
+        self.element_zUnit = QtWidgets.QLabel("H")
         layout.addWidget(self.element_zLabel,row,0)
         layout.addWidget(self.element_zEdit,row,1)
         layout.addWidget(self.element_zUnit,row,2)
 
         row +=1
-        self.symmetryLabel = QLabel("Symmetry")
-        self.symmetryList = QComboBox(self)
+        self.symmetryLabel = QtWidgets.QLabel("Symmetry")
+        self.symmetryList = QtWidgets.QComboBox(self)
         self.symmetry_options=['K1', 'L3', 'M5', 'M3', 'M1', 'N7', 'N5', 'N3', 'N1']
         self.symmetryList.addItems(self.symmetry_options) 
         layout.addWidget(self.symmetryList,  row, 1)
         
         
         row +=1
-        self.edge_onsetLabel = QLabel("Onset")
-        self.edge_onsetEdit = QLineEdit(" 5.0")
+        self.edge_onsetLabel = QtWidgets.QLabel("Onset")
+        self.edge_onsetEdit = QtWidgets.QLineEdit(" 5.0")
         self.edge_onsetEdit.setValidator(validfloat)
         self.edge_onsetEdit.editingFinished.connect(self.on_onset_enter)
-        self.edge_onsetUnit = QLabel("eV")
+        self.edge_onsetUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.edge_onsetLabel,row,0)
         layout.addWidget(self.edge_onsetEdit,row,1)
         layout.addWidget(self.edge_onsetUnit,row,2)
 
         row += 1
-        self.edge_excl_startLabel = QLabel("Excl.Start:")
-        self.edge_excl_startEdit = QLineEdit(" 5.0")
+        self.edge_excl_startLabel = QtWidgets.QLabel("Excl.Start:")
+        self.edge_excl_startEdit = QtWidgets.QLineEdit(" 5.0")
         self.edge_excl_startEdit.setValidator(validfloat)
         self.edge_excl_startEdit.editingFinished.connect(self.on_excl_start_enter)
-        self.edge_excl_startUnit = QLabel("eV")
+        self.edge_excl_startUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.edge_excl_startLabel,row,0)
         layout.addWidget(self.edge_excl_startEdit,row,1)
         layout.addWidget(self.edge_excl_startUnit,row,2)
 
         row += 1
-        self.edge_excl_endLabel = QLabel("Excl.End")
-        self.edge_excl_endEdit = QLineEdit(" 5.0")
+        self.edge_excl_endLabel = QtWidgets.QLabel("Excl.End")
+        self.edge_excl_endEdit = QtWidgets.QLineEdit(" 5.0")
         self.edge_excl_endEdit.setValidator(validfloat)
         self.edge_excl_endEdit.editingFinished.connect(self.on_excl_end_enter)
-        self.edge_excl_endUnit = QLabel("eV")
+        self.edge_excl_endUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.edge_excl_endLabel,row,0)
         layout.addWidget(self.edge_excl_endEdit,row,1)
         layout.addWidget(self.edge_excl_endUnit,row,2)
 
         row += 1
-        self.edge_multiplierLabel = QLabel("Multiplier")
-        self.edge_multiplierEdit = QLineEdit(" 5.0")
+        self.edge_multiplierLabel = QtWidgets.QLabel("Multiplier")
+        self.edge_multiplierEdit = QtWidgets.QLineEdit(" 5.0")
         self.edge_multiplierEdit.setValidator(validfloat)
         self.edge_multiplierEdit.editingFinished.connect(self.on_multiplier_enter)
-        self.edge_multiplierUnit = QLabel("a.u.")
+        self.edge_multiplierUnit = QtWidgets.QLabel("a.u.")
         layout.addWidget(self.edge_multiplierLabel,row,0)
         layout.addWidget(self.edge_multiplierEdit,row,1)
         layout.addWidget(self.edge_multiplierUnit,row,2)
 
         row += 1
-        self.quantifyButton = QPushButton()
+        self.quantifyButton = QtWidgets.QPushButton()
         self.quantifyButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
         self.quantifyButton.setText("Quantification")
         layout.addWidget(self.quantifyButton,  row,0, 1, 3)
@@ -177,32 +181,32 @@ class CoreLossDialog(QWidget):
         self.quantifyButton.clicked.connect(self.do_fit)
          
         row += 1
-        self.conv_LL_Button = QPushButton()
+        self.conv_LL_Button = QtWidgets.QPushButton()
         self.conv_LL_Button.setText("Conv.LL")
         self.conv_LL_Button.setCheckable(True)
         layout.addWidget(self.conv_LL_Button,  row, 0)
         # self.conv_LL_Button.clicked.connect(self.update_ll_plot)
 
-        self.probabilityButton = QPushButton()
+        self.probabilityButton = QtWidgets.QPushButton()
         self.probabilityButton.setText("Probability")
         self.probabilityButton.setCheckable(True)
         layout.addWidget(self.probabilityButton,  row, 2)
         self.probabilityButton.clicked.connect(self.set_intensity_scale)
 
-        self.show_edgesButton = QPushButton()
+        self.show_edgesButton = QtWidgets.QPushButton()
         self.show_edgesButton.setText("Show Edges")
         self.show_edgesButton.setCheckable(True)
         layout.addWidget(self.show_edgesButton,  row, 1)
         self.show_edgesButton.clicked.connect(self.update_cl_plot)
         
         row += 1
-        self.plot_edgesButton = QPushButton()
+        self.plot_edgesButton = QtWidgets.QPushButton()
         self.plot_edgesButton.setText("Plot Model")
         self.plot_edgesButton.setCheckable(True)
         layout.addWidget(self.plot_edgesButton,  row, 0)
         self.plot_edgesButton.clicked.connect(self.update_cl_plot)
 
-        self.do_allButton = QPushButton()
+        self.do_allButton = QtWidgets.QPushButton()
         self.do_allButton.setText("Do All")
         self.do_allButton.setCheckable(True)
         layout.addWidget(self.do_allButton,  row, 2)
@@ -513,7 +517,7 @@ class CoreLossDialog(QWidget):
     def get_additional_features(self):
         plot_features = {}
         if self.fit_areaButton.isChecked():        
-            plot_features[f"fit_area"] = pg.LinearRegionItem(values=(self.edges['fit_area']['fit_start'], self.edges['fit_area']['fit_end']), brush=(0, 150, 0, 40))    
+            plot_features["fit_area"] = pg.LinearRegionItem(values=(self.edges['fit_area']['fit_start'], self.edges['fit_area']['fit_end']), brush=(0, 150, 0, 40))    
             for key, edge in self.parent.dataset.metadata['core_loss'].items():
                 if key.isdigit():
                     plot_features[f"edge_{key}_exclude"] = pg.LinearRegionItem(values=(edge['start_exclude'], edge['end_exclude']), brush=(150, 0, 0, 40))    
