@@ -338,11 +338,18 @@ class InfoDialog(QWidget):
 
    
     def set_energy_scale(self, value=0):
-        self.energy_scale = self.parent.datasets[self.key].get_spectral_dims(return_axis=True)[0]
-        dispersion = self.parent.datasets[self.key].get_dimension_slope(self.energy_scale)
-        self.energy_scale *= (float(self.dispersionEdit.displayText()) / dispersion)
-        self.energy_scale += (float(self.offsetEdit.displayText()) - self.energy_scale[0])
-        self.parent.plotUpdate()
+        if 'SPEC' in self.parent.dataset.data_type.name:
+            self.energy_scale = self.parent.datasets[self.key].get_spectral_dims(return_axis=True)[0]
+            dispersion = self.parent.datasets[self.key].get_dimension_slope(self.energy_scale)
+            self.energy_scale *= (float(self.dispersionEdit.displayText()) / dispersion)
+            self.energy_scale += (float(self.offsetEdit.displayText()) - self.energy_scale[0])
+            self.parent.plotUpdate()
+        elif self.parent.dataset.data_type.name == 'IMAGE':
+            pixel_size_x = float(self.dispersionEdit.displayText())
+            pixel_size_y = float(self.offsetEdit.displayText())
+            self.parent.dataset.x = np.arange(self.parent.dataset.shape[0]) * pixel_size_x
+            self.parent.dataset.y = np.arange(self.parent.dataset.shape[1]) * pixel_size_y
+            self.parent.plotUpdate()
     
     def set_intensity_scale(self, checked):
         self.parent.intensity_scale = 1.0

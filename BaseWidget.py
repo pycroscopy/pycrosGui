@@ -38,13 +38,16 @@ class ImageView(pg.ImageView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
+
         self.ui.roiBtn.setChecked(True)
         self.roiClicked()
-
+        
     def roiChanged(self):
         super().roiChanged()
         for i in range(len(self.roiCurves)):
             self.roiCurves[i].setPen('black')
+        
+
     
 class BaseWidget(QtWidgets.QMainWindow):    
     def __init__(self, sidebar=[], filename=None):
@@ -110,6 +113,14 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.plotParamWindow2 = pg.PlotWidget()
         self.plotParamWindow3 = ImageView()
 
+        self.plot3_view = self.plotParamWindow3.getView()
+        self.titleLabel = pg.LabelItem('', size='11pt', parent=self.plot3_view)
+        self.titleLabel.anchor((0, 0), (0, 0), offset=(0, -20))
+        self.plotParamWindow3.addItem(self.titleLabel, 0)
+        self.setTitle(None)  ## hide
+        self.img = self.plotParamWindow3.getImageItem()    
+        self.img.hoverEvent = self.imageHoverEvent
+        
         self.plotParamWindow.plot((0,1),(0,1))
         
         plotLayout  = QtWidgets.QVBoxLayout()
@@ -286,6 +297,37 @@ class BaseWidget(QtWidgets.QMainWindow):
             tip='About pycrosGUI')
         
         self.add_actions(self.help_menu, (about_action,))
+
+    def imageHoverEvent(self, event):
+        """Show the position, pixel, and value under the mouse cursor.
+        """
+        if event.isExit():
+            self.setTitle("")
+            return
+        pos = event.pos()
+        data = self.img.image
+        i, j = pos.y(), pos.x()
+        i = int(np.clip(i, 0, data.shape[0] - 1))
+        j = int(np.clip(j, 0, data.shape[1] - 1))
+        val = data[i, j]
+        ppos = self.img.mapToParent(pos)
+        x, y = ppos.x(), ppos.y()
+        self.setTitle("pos: (%0.1f, %0.1f)  pixel: (%d, %d)  value: %.3g" % (x, y, i, j, val))
+
+    def setTitle(self, title=None, **args):
+        """
+        Set the title of the plot. Basic HTML formatting is allowed.
+        If title is None, then the title will be hidden.
+        """
+        if title is None:
+            self.titleLabel.setVisible(False)
+            #self.view.setRowFixedHeight(0, 0)
+            self.titleLabel.setMaximumHeight(0)
+        else:
+            self.titleLabel.setMaximumHeight(30)
+            #self.view.setRowFixedHeight(0, 30)
+            self.titleLabel.setVisible(True)
+            self.titleLabel.setText(title, **args)
 
     def mouse_clicked(self, mouseClickEvent):
         if self.tabCurrent != 1:
