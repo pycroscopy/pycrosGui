@@ -18,6 +18,10 @@
 #           ** changed to reflect Libra and pA ** Nov 2012
 #       
 #####################################################################
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -29,7 +33,7 @@ import scipy
 from pyTEMlib import eels_tools
 
 
-class InfoDialog(QWidget):
+class InfoDialog(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(InfoDialog, self).__init__(parent)
     
@@ -40,12 +44,11 @@ class InfoDialog(QWidget):
         self.setWindowTitle("Info")
 
     def get_sidbar(self): 
-        validfloat = QDoubleValidator()
-        validint = QIntValidator()        
+        validfloat = QtGui.QDoubleValidator()
         
-        layout = QGridLayout()
+        layout = QtWidgets.QGridLayout()
         row = 0 
-        self.mainList = QComboBox(self)
+        self.mainList = QtWidgets.QComboBox(self)
         self.mainList.addItem("None")
         layout.addWidget(self.mainList,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)  
@@ -53,7 +56,7 @@ class InfoDialog(QWidget):
         self.mainList.activated[str].connect(self.set_dataset)
         
         row += 1
-        self.scaleButton = QPushButton()
+        self.scaleButton = QtWidgets.QPushButton()
         self.scaleButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
         self.scaleButton.setText("Scale")
         layout.addWidget(self.scaleButton,  row,0, 1, 3)
@@ -61,74 +64,74 @@ class InfoDialog(QWidget):
         self.scaleButton.clicked.connect(self.cursor2energy_scale)
         
         row += 1
-        self.offsetLabel = QLabel("Offset")
-        self.offsetEdit = QLineEdit(" 100.0")
+        self.offsetLabel = QtWidgets.QLabel("Offset")
+        self.offsetEdit = QtWidgets.QLineEdit(" 100.0")
         self.offsetEdit.setValidator(validfloat)
-        self.offsetEdit.editingFinished.connect(self.set_energy_scale)
-        self.offsetUnit = QLabel("eV")
+        self.offsetEdit.editingFinished.connect(self.set_scale)
+        self.offsetUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.offsetLabel,row,0)
         layout.addWidget(self.offsetEdit,row,1)
         layout.addWidget(self.offsetUnit,row,2)
         
         row += 1
-        self.dispersionLabel = QLabel("Dispersion")
-        self.dispersionEdit = QLineEdit(" 100.0")
+        self.dispersionLabel = QtWidgets.QLabel("Dispersion")
+        self.dispersionEdit = QtWidgets.QLineEdit(" 100.0")
         self.dispersionEdit.setValidator(validfloat)
-        self.dispersionEdit.editingFinished.connect(self.set_energy_scale)
-        self.dispersionUnit = QLabel("eV")
+        self.dispersionEdit.editingFinished.connect(self.set_scale)
+        self.dispersionUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.dispersionLabel,row,0)
         layout.addWidget(self.dispersionEdit,row,1)
         layout.addWidget(self.dispersionUnit,row,2)
         
         row += 1
-        self.experimentButton = QPushButton()
+        self.experimentButton = QtWidgets.QPushButton()
         self.experimentButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
         self.experimentButton.setText("Experimental Conditions")
         layout.addWidget(self.experimentButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)        
         
         row += 1
-        self.timeLabel = QLabel("Exp. Time")
-        self.timeEdit = QLineEdit(" 100.0")
+        self.timeLabel = QtWidgets.QLabel("Exp. Time")
+        self.timeEdit = QtWidgets.QLineEdit(" 100.0")
         self.timeEdit.setValidator(validfloat)
         self.timeEdit.editingFinished.connect(self.OnExposeEnter)
-        self.timeUnit = QLabel("ms")
+        self.timeUnit = QtWidgets.QLabel("ms")
         layout.addWidget(self.timeLabel,row,0)
         layout.addWidget(self.timeEdit,row,1)
         layout.addWidget(self.timeUnit,row,2)
 
         row += 1
-        self.convLabel = QLabel("Conv. Angle")
-        self.convEdit = QLineEdit(" 100.0")
+        self.convLabel = QtWidgets.QLabel("Conv. Angle")
+        self.convEdit = QtWidgets.QLineEdit(" 100.0")
         self.convEdit.setValidator(validfloat)
         self.convEdit.editingFinished.connect(self.OnConvEnter)
-        self.convUnit = QLabel("mrad")
+        self.convUnit = QtWidgets.QLabel("mrad")
         layout.addWidget(self.convLabel,row,0)
         layout.addWidget(self.convEdit,row,1)
         layout.addWidget(self.convUnit,row,2)
 
         row += 1
-        self.collLabel = QLabel("Coll. Angle")
-        self.collEdit = QLineEdit(" 10.0")
+        self.collLabel = QtWidgets.QLabel("Coll. Angle")
+        self.collEdit = QtWidgets.QLineEdit(" 10.0")
         self.collEdit.setValidator(validfloat)
         self.collEdit.editingFinished.connect(self.OnCollEnter)
-        self.collUnit = QLabel("mrad")
+        self.collUnit = QtWidgets.QLabel("mrad")
         layout.addWidget(self.collLabel,row,0)
         layout.addWidget(self.collEdit,row,1)
         layout.addWidget(self.collUnit,row,2)
 
         row += 1
-        self.E0Label = QLabel("Acc. Voltage")
-        self.E0Edit = QLineEdit(" 100.0")
+        self.E0Label = QtWidgets.QLabel("Acc. Voltage")
+        self.E0Edit = QtWidgets.QLineEdit(" 100.0")
         self.E0Edit.setValidator(validfloat)
         self.E0Edit.editingFinished.connect(self.OnE0Enter)
-        self.E0Unit = QLabel("kV")
+        self.E0Unit = QtWidgets.QLabel("kV")
         layout.addWidget(self.E0Label,row,0)
         layout.addWidget(self.E0Edit,row,1)
         layout.addWidget(self.E0Unit,row,2)
 
         row += 1
-        self.quantifyButton = QPushButton()
+        self.quantifyButton = QtWidgets.QPushButton()
         self.quantifyButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
         self.quantifyButton.setText("Quantification")
         
@@ -138,20 +141,20 @@ class InfoDialog(QWidget):
         layout.setColumnStretch(0, 3)        
         
         row += 1 
-        self.referenceList = QComboBox(self)
+        self.referenceList = QtWidgets.QComboBox(self)
         self.referenceList.addItem("None")
         layout.addWidget(self.referenceList,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)  
         self.referenceList.activated[str].connect(self.set_flux)
         
         row += 1
-        self.get_shiftButton = QPushButton()
+        self.get_shiftButton = QtWidgets.QPushButton()
         self.get_shiftButton.setText("Get Shift")
         self.get_shiftButton.setCheckable(True)
         layout.addWidget(self.get_shiftButton,  row, 0)
         self.get_shiftButton.clicked.connect(self.get_shift)
 
-        self.set_shiftButton = QPushButton()
+        self.set_shiftButton = QtWidgets.QPushButton()
         self.set_shiftButton.setText("Shift Spectrum")
         self.set_shiftButton.setCheckable(True)
         layout.addWidget(self.set_shiftButton,  row, 2)
@@ -159,39 +162,39 @@ class InfoDialog(QWidget):
         self.set_shiftButton.clicked.connect(self.shift_spectrum)
 
         row += 1
-        self.flux_ppmLabel = QLabel("Relative Flux")
-        self.flux_ppmEdit = QLineEdit(" 1")
+        self.flux_ppmLabel = QtWidgets.QLabel("Relative Flux")
+        self.flux_ppmEdit = QtWidgets.QLineEdit(" 1")
         self.flux_ppmEdit.setValidator(validfloat)
         self.flux_ppmEdit.editingFinished.connect(self.OnFlux_ppmEnter)
-        self.flux_ppmUnit = QLabel("ppm")
+        self.flux_ppmUnit = QtWidgets.QLabel("ppm")
         layout.addWidget(self.flux_ppmLabel,row,0)
         layout.addWidget(self.flux_ppmEdit,row,1)
         layout.addWidget(self.flux_ppmUnit,row,2)
 
         row += 1
-        self.conversionLabel = QLabel("Conversion")
-        self.conversionEdit = QLineEdit(" 25.0")
+        self.conversionLabel = QtWidgets.QLabel("Conversion")
+        self.conversionEdit = QtWidgets.QLineEdit(" 25.0")
         self.conversionEdit.setValidator(validfloat)
         self.conversionEdit.editingFinished.connect(self.OnConversionEnter)
-        self.conversionUnit = QLabel("e<sup>-</sup>/counts")
+        self.conversionUnit = QtWidgets.QLabel("e<sup>-</sup>/counts")
         layout.addWidget(self.conversionLabel,row,0)
         layout.addWidget(self.conversionEdit,row,1)
         layout.addWidget(self.conversionUnit,row,2)
         row += 1
-        self.fluxLabel = QLabel("Flux")
-        self.fluxEdit = QLineEdit(" 100.0")
+        self.fluxLabel = QtWidgets.QLabel("Flux")
+        self.fluxEdit = QtWidgets.QLineEdit(" 100.0")
         self.fluxEdit.setValidator(validfloat)
         self.fluxEdit.editingFinished.connect(self.OnFluxEnter)
-        self.fluxUnit = QLabel("e<sup>-</sup>/s")
+        self.fluxUnit = QtWidgets.QLabel("e<sup>-</sup>/s")
         layout.addWidget(self.fluxLabel,row,0)
         layout.addWidget(self.fluxEdit,row,1)
         layout.addWidget(self.fluxUnit,row,2)
         row += 1
-        self.VOALabel = QLabel("Measurement")
-        self.VOAEdit = QLineEdit(" 10.0")
+        self.VOALabel = QtWidgets.QLabel("Measurement")
+        self.VOAEdit = QtWidgets.QLineEdit(" 10.0")
         self.VOAEdit.setValidator(validfloat)
         self.VOAEdit.editingFinished.connect(self.OnVOAEnter)
-        self.VOAUnit = QLabel("pA")
+        self.VOAUnit = QtWidgets.QLabel("pA")
         layout.addWidget(self.VOALabel,row,0)
         layout.addWidget(self.VOAEdit,row,1)
         layout.addWidget(self.VOAUnit,row,2)
@@ -290,7 +293,7 @@ class InfoDialog(QWidget):
             self.dispersionEdit.setText(f'{disp:.3f}')
             self.dispersionUnit.setText('eV')
             self.dispersionLabel.setText('Dispersion')
-        elif self.parent.dataset.data_type.name == 'IMAGE':
+        elif 'IMAGE' in self.parent.dataset.data_type.name:
             pixel_size_x = self.parent.dataset.x[1] - self.parent.dataset.x[0]
             self.offsetEdit.setText(f'{pixel_size_x:.3f}')
             self.offsetUnit.setText('nm')
@@ -313,8 +316,11 @@ class InfoDialog(QWidget):
                 self.collEdit.setText(f"{self.parent.dataset.metadata['experiment']['collection_angle']}")
             else:
                 self.collEdit.setText('0')
-            self.E0Edit.setText(f"{self.parent.dataset.metadata['experiment']['acceleration_voltage']/1000:.0f}")
-        
+            if 'acceleration_voltage' in self.parent.dataset.metadata['experiment']:
+                self.E0Edit.setText(f"{self.parent.dataset.metadata['experiment']['acceleration_voltage']/1000:.0f}")
+        else:
+            self.parent.dataset.metadata['experiment'] = {}
+
         if self.parent.intensity_scale == 1.0:
             self.quantifyButton.setChecked(False)
         else:
@@ -334,21 +340,26 @@ class InfoDialog(QWidget):
         offset = float(self.parent.left_cursor_value.displayText()) - start_channel * dispersion
         self.offsetEdit.setText(f'{offset:.3f}')
         self.dispersionEdit.setText(f'{dispersion:.3f}')
-        self.set_energy_scale()
+        self.set_scale()
 
    
-    def set_energy_scale(self, value=0):
+    def set_scale(self, value=0):
         if 'SPEC' in self.parent.dataset.data_type.name:
             self.energy_scale = self.parent.datasets[self.key].get_spectral_dims(return_axis=True)[0]
             dispersion = self.parent.datasets[self.key].get_dimension_slope(self.energy_scale)
             self.energy_scale *= (float(self.dispersionEdit.displayText()) / dispersion)
             self.energy_scale += (float(self.offsetEdit.displayText()) - self.energy_scale[0])
             self.parent.plotUpdate()
-        elif self.parent.dataset.data_type.name == 'IMAGE':
+        elif 'IMAGE' in self.parent.dataset.data_type.name:
             pixel_size_x = float(self.dispersionEdit.displayText())
             pixel_size_y = float(self.offsetEdit.displayText())
-            self.parent.dataset.x = np.arange(self.parent.dataset.shape[0]) * pixel_size_x
-            self.parent.dataset.y = np.arange(self.parent.dataset.shape[1]) * pixel_size_y
+            image_dims = self.parent.dataset.get_image_dims()
+            self.parent.dataset.set_dimension(image_dims[0], sidpy.Dimension(np.arange(self.parent.dataset.shape[image_dims[0]])*pixel_size_x, 
+                                                                             name='x', units='nm', quantity='Length', 
+                                                                             dimension_type='spatial'))
+            self.parent.dataset.set_dimension(image_dims[1], sidpy.Dimension(np.arange(self.parent.dataset.shape[image_dims[1]])*pixel_size_y, 
+                                                                              name='y', units='nm', quantity='Length',
+                                                                              dimension_type='spatial'))
             self.parent.plotUpdate()
     
     def set_intensity_scale(self, checked):

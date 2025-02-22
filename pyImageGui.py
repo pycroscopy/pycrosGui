@@ -91,9 +91,20 @@ class MainWidget(BaseWidget):
         additional_features = {}
         if 'plot' not in self.dataset.metadata:
             return
+        print('plot', self.dataset.metadata['plot'])
         if 'additional_features' in self.dataset.metadata['plot']:
             if 'Image' in self.dataset.metadata['plot']['additional_features']:
                 additional_features = self.ImageDialog.get_additional_features()
+                if 'atoms' in additional_features:
+                    self.blobs.setData(pos=additional_features['atoms'])
+                    self.blobs.setVisible(True)
+                    print('blobs', additional_features['atoms'].shape)
+                    del additional_features['atoms']
+                else:
+                    self.blobs.setData(pos=[[0,0]])
+                    self.blobs.setVisible(False)
+                
+
             elif 'CoreLoss' in self.dataset.metadata['plot']['additional_features']:
                 additional_features = self.CoreLossDialog.get_additional_features()
                 self.plot_features = additional_features

@@ -12,10 +12,6 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-
 import os as os
 import numpy as np
 import scipy as scipy
@@ -84,7 +80,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.end_channel = -2
         
         self.path = '.'
-        self.setWindowTitle('Quantifit version '+str(self.version) +'qt serial #: 1')
+        self.setWindowTitle('pycrosGUI version '+str(self.version) +'qt serial #: 1')
         
         self.add_spectrum = []
         self.add_si_spectrum = []
@@ -111,15 +107,8 @@ class BaseWidget(QtWidgets.QMainWindow):
         # Creating an instance of the Figure
         self.plotParamWindow  = pg.PlotWidget()
         self.plotParamWindow2 = pg.PlotWidget()
-        self.plotParamWindow3 = ImageView()
-
-        self.plot3_view = self.plotParamWindow3.getView()
-        self.titleLabel = pg.LabelItem('', size='11pt', parent=self.plot3_view)
-        self.titleLabel.anchor((0, 0), (0, 0), offset=(0, -20))
-        self.plotParamWindow3.addItem(self.titleLabel, 0)
-        self.setTitle(None)  ## hide
-        self.img = self.plotParamWindow3.getImageItem()    
-        self.img.hoverEvent = self.imageHoverEvent
+        self.plotParamWindow3 = pg.PlotWidget()
+        
         
         self.plotParamWindow.plot((0,1),(0,1))
         
@@ -174,7 +163,23 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.si_roi.setZValue(10)
 
         self.plot3 = QtWidgets.QWidget()
-        plotLayout3.addWidget(self.plotParamWindow3)        
+
+        self.titleLabel =  QtWidgets.QLabel(" ") # pg.TextItem('', color='gray') ## , size='11pt', parent=self.plot3_view)
+        
+
+        self.image_item = ImageView()
+        self.img = self.image_item.getImageItem()    
+        self.img.hoverEvent = self.imageHoverEvent
+        view = self.image_item.getView()
+        pos = np.array([[0,0]])
+        self.blobs = pg.ScatterPlotItem(pos=pos, pen=None , symbol='o', size=10, brush=pg.mkBrush(200,0,0,50), name='atoms')
+        self.blobs.setZValue(100)
+        self.blobs.setVisible(False)
+        view = self.image_item.getView()
+        view.addItem(self.blobs)
+        
+        plotLayout3.addWidget(self.titleLabel) 
+        plotLayout3.addWidget(self.image_item)        
         self.plot3.setLayout(plotLayout3)
         
         self.tab = QtWidgets.QTabWidget()
@@ -312,7 +317,8 @@ class BaseWidget(QtWidgets.QMainWindow):
         val = data[i, j]
         ppos = self.img.mapToParent(pos)
         x, y = ppos.x(), ppos.y()
-        self.setTitle("pos: (%0.1f, %0.1f)  pixel: (%d, %d)  value: %.3g" % (x, y, i, j, val))
+        units = self.dataset.x.units
+        self.setTitle(f"pos: ({x:0.1f}, {x:0.1f}){units} - pixel: ({i:d}, {j:d})  value: {val:3g}")
 
     def setTitle(self, title=None, **args):
         """
@@ -320,12 +326,13 @@ class BaseWidget(QtWidgets.QMainWindow):
         If title is None, then the title will be hidden.
         """
         if title is None:
-            self.titleLabel.setVisible(False)
-            #self.view.setRowFixedHeight(0, 0)
-            self.titleLabel.setMaximumHeight(0)
+            pass
+            # self.titleLabel.setVisible(False)
+            # self.view.setRowFixedHeight(0, 0)
+            #vself.titleLabel.setMaximumHeight(0)
         else:
-            self.titleLabel.setMaximumHeight(30)
-            #self.view.setRowFixedHeight(0, 30)
+            # self.titleLabel.setMaximumHeight(30)
+            # self.view.setRowFixedHeight(0, 30)
             self.titleLabel.setVisible(True)
             self.titleLabel.setText(title, **args)
 
@@ -597,13 +604,13 @@ class BaseWidget(QtWidgets.QMainWindow):
                     data_set.title = self.dataset.title
                     self.dataset = data_set
                     dims = [data_set.z]
-                self.plotParamWindow3.setImage(np.array(self.dataset), xvals=dims[0].values)
+                self.image_item.setImage(np.array(self.dataset), xvals=dims[0].values)
             else:
-                self.plotParamWindow3.setImage(np.array(self.dataset))
+                self.image_item.setImage(np.array(self.dataset))
 
-            self.img = self.plotParamWindow3.getImageItem()
-            self.view = self.plotParamWindow3.getView()
-            self.histo = self.plotParamWindow3.ui.histogram
+            self.img = self.image_item.getImageItem()
+            self.view = self.image_item.getView()
+            self.histo = self.image_item.ui.histogram
             self.view.setAspectLocked(lock=True, ratio=1)
             dims = self.dataset.get_dimensions_by_type(sidpy.DimensionType.SPATIAL, return_axis=True)
             if len(dims) <1:
@@ -625,8 +632,18 @@ class BaseWidget(QtWidgets.QMainWindow):
             scale.setParentItem(self.view)
             scale.anchor((1, 1), (1, 1), offset=(-20, -20))
             
-            # self.plotParamWindow3.autoRange()
             self.plot_additional_features(self.view)
+            """# self.plotParamWindow3.autoRange()
+            
+            print('new)')
+            child_item = self.view.allChildItems()
+            for item in child_item:
+                print(item)
+            print(self.view.allChildren())
+            childs = self.view.allChildren()
+            for child in childs:
+                print(child)
+            """
             self.tab.setCurrentWidget(self.plot3)
     
     def plot_additional_features(self, plt):

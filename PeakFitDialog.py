@@ -18,9 +18,7 @@
 #           ** changed to reflect Libra and pA ** Nov 2012
 #       
 #####################################################################
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt5 import QtWidgets
 
 import numpy as np
 import sidpy
@@ -30,7 +28,7 @@ from pyTEMlib import eels_tools
 
 from periodic_table import PeriodicTable
 
-class PeakFitDialog(QWidget):
+class PeakFitDialog(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(PeakFitDialog, self).__init__(parent)
     
@@ -47,12 +45,12 @@ class PeakFitDialog(QWidget):
         
 
     def get_sidbar(self): 
-        validfloat = QDoubleValidator()
-        validint = QIntValidator()        
+        validfloat = QtWidgets.QDoubleValidator()
+        validint = QtWidgets.QIntValidator()        
         
-        layout = QGridLayout()
+        layout = QtWidgets.QGridLayout()
         row = 0 
-        self.mainList = QComboBox(self)
+        self.mainList = QtWidgets.QComboBox(self)
         self.mainList.addItem("None")
         layout.addWidget(self.mainList,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)  
@@ -60,36 +58,36 @@ class PeakFitDialog(QWidget):
         self.mainList.activated[str].connect(self.update_peak_dataset)
         
         row += 1
-        self.fit_areaButton = QPushButton()
-        self.fit_areaButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
+        self.fit_areaButton = QtWidgets.QPushButton()
+        self.fit_areaButton.setStyleSheet('QtWidgets.QPushButton {background-color: blue; color: white;}')
         self.fit_areaButton.setText("Fit Area")
         layout.addWidget(self.fit_areaButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
         # self.fit_areaButton.clicked.connect(self.set_fit_area)
         
         row += 1
-        self.fit_startLabel = QLabel("Start Fit")
-        self.fit_startEdit = QLineEdit(" 3.0")
+        self.fit_startLabel = QtWidgets.QLabel("Start Fit")
+        self.fit_startEdit = QtWidgets.QLineEdit(" 3.0")
         # self.fit_startEdit.setValidator(validfloat)
         self.fit_startEdit.editingFinished.connect(self.on_fit_start_enter)
-        self.fit_startUnit = QLabel("eV")
+        self.fit_startUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.fit_startLabel,row,0)
         layout.addWidget(self.fit_startEdit,row,1)
         layout.addWidget(self.fit_startUnit,row,2)
 
         row += 1
-        self.fit_endLabel = QLabel("End Fit")
-        self.fit_endEdit = QLineEdit(" 30.0")
+        self.fit_endLabel = QtWidgets.QLabel("End Fit")
+        self.fit_endEdit = QtWidgets.QLineEdit(" 30.0")
         self.fit_endEdit.setValidator(validfloat)
         self.fit_endEdit.editingFinished.connect(self.on_fit_end_enter)
-        self.fit_endUnit = QLabel("eV")
+        self.fit_endUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.fit_endLabel,row,0)
         layout.addWidget(self.fit_endEdit,row,1)
         layout.addWidget(self.fit_endUnit,row,2)
 
         row += 1
-        self.find_peakButton = QPushButton()
-        self.find_peakButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
+        self.find_peakButton = QtWidgets.QPushButton()
+        self.find_peakButton.setStyleSheet('QtWidgets.QPushButton {background-color: blue; color: white;}')
         self.find_peakButton.setText("Peak Finding")
         layout.addWidget(self.find_peakButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
@@ -97,30 +95,30 @@ class PeakFitDialog(QWidget):
        
 
         row += 1
-        self.addZL_Button = QPushButton()
+        self.addZL_Button = QtWidgets.QPushButton()
         self.addZL_Button.setText("use zero loss")
         self.addZL_Button.setCheckable(True)
         layout.addWidget(self.addZL_Button,  row, 0)
         # self.conv_LL_Button.clicked.connect(self.update_ll_plot)
 
-        self.addLL_Button = QPushButton()
+        self.addLL_Button = QtWidgets.QPushButton()
         self.addLL_Button.setText("use low loss")
         self.addLL_Button.setCheckable(True)
         layout.addWidget(self.addLL_Button,  row, 1)
         
-        self.addCL_Button = QPushButton()
+        self.addCL_Button = QtWidgets.QPushButton()
         self.addCL_Button.setText("use core loss")
         self.addCL_Button.setCheckable(True)
         layout.addWidget(self.addCL_Button,  row, 2)
         
         row +=1
-        self.smoothLabel = QLabel("Iterations")
+        self.smoothLabel = QtWidgets.QLabel("Iterations")
         layout.addWidget(self.smoothLabel,  row, 0)
-        self.smmoothList = QComboBox(self)
+        self.smmoothList = QtWidgets.QComboBox(self)
         self.smmoothList.addItems(["0", "1", "2", "3"])
         layout.addWidget(self.smmoothList,  row, 1)
 
-        self.smoothButton = QPushButton()
+        self.smoothButton = QtWidgets.QPushButton()
         self.smoothButton.setText("Smooth")
         self.smoothButton.setCheckable(True)
         layout.addWidget(self.smoothButton,  row, 2)
@@ -128,11 +126,11 @@ class PeakFitDialog(QWidget):
         self.smoothButton.clicked.connect(self.smooth)
 
         row += 1
-        self.find_PeakLabel = QLabel("Number")
-        self.find_PeakEdit = QLineEdit(" 0")
+        self.find_PeakLabel = QtWidgets.QLabel("Number")
+        self.find_PeakEdit = QtWidgets.QLineEdit(" 0")
         self.find_PeakEdit.setValidator(validint)
         #self.find_PeakEdit.editingFinished.connect(self.find_elements)
-        self.find_PeakButton = QPushButton()
+        self.find_PeakButton = QtWidgets.QPushButton()
         self.find_PeakButton.setText("Find")
         self.find_PeakEdit.editingFinished.connect(self.find_peaks)
        
@@ -141,75 +139,75 @@ class PeakFitDialog(QWidget):
         layout.addWidget(self.find_PeakButton,row,2)
 
         row += 1
-        self.peaksButton = QPushButton()
-        self.peaksButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
+        self.peaksButton = QtWidgets.QPushButton()
+        self.peaksButton.setStyleSheet('QtWidgets.QPushButton {background-color: blue; color: white;}')
         self.peaksButton.setText("Peaks")
         layout.addWidget(self.peaksButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
         self.peaksButton.clicked.connect(self.fit_peaks)
        
         row +=1
-        self.peaksLabel = QLabel("Peak:")
-        self.peakList = QComboBox(self)
+        self.peaksLabel = QtWidgets.QLabel("Peak:")
+        self.peakList = QtWidgets.QComboBox(self)
         self.peakList.addItem("Peak 1")
         self.peakList.addItem("add Peak") 
-        self.peaksOut = QLabel(" ")
+        self.peaksOut = QtWidgets.QLabel(" ")
         layout.addWidget(self.peakList,  row, 1)
         layout.addWidget(self.peaksLabel,  row, 0)
         layout.addWidget(self.peaksOut,  row, 2)
         self.peakList.activated[str].connect(self.update)
 
         #row +=1
-        #self.symmetryLabel = QLabel("Symmetry")
-        #self.symmetryList = QComboBox(self)
+        #self.symmetryLabel = QtWidgets.QLabel("Symmetry")
+        #self.symmetryList = QtWidgets.QComboBox(self)
         #self.symmetry_options= 'Gauss', 'Lorentzian', 'Drude', 'Zero-Loss']
         #self.symmetryList.addItems(self.symmetry_options) 
         #layout.addWidget(self.symmetryList,  row, 1)
         
         
         row +=1
-        self.peak_positionLabel = QLabel("Position")
-        self.peak_positionEdit = QLineEdit(" 5.0")
+        self.peak_positionLabel = QtWidgets.QLabel("Position")
+        self.peak_positionEdit = QtWidgets.QLineEdit(" 5.0")
         self.peak_positionEdit.setValidator(validfloat)
         self.peak_positionEdit.editingFinished.connect(self.on_position_enter)
-        self.peak_positionUnit = QLabel("eV")
+        self.peak_positionUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.peak_positionLabel,row,0)
         layout.addWidget(self.peak_positionEdit,row,1)
         layout.addWidget(self.peak_positionUnit,row,2)
 
         row += 1
-        self.peak_amplitudeLabel = QLabel("Amplitude:")
-        self.peak_amplitudeEdit = QLineEdit(" 5.0")
+        self.peak_amplitudeLabel = QtWidgets.QLabel("Amplitude:")
+        self.peak_amplitudeEdit = QtWidgets.QLineEdit(" 5.0")
         self.peak_amplitudeEdit.setValidator(validfloat)
         self.peak_amplitudeEdit.editingFinished.connect(self.on_amplitude_enter)
-        self.peak_amplitudeUnit = QLabel("eV")
+        self.peak_amplitudeUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.peak_amplitudeLabel,row,0)
         layout.addWidget(self.peak_amplitudeEdit,row,1)
         layout.addWidget(self.peak_amplitudeUnit,row,2)
 
         row += 1
-        self.peak_widthLabel = QLabel("Width FWHM")
-        self.peak_widthEdit = QLineEdit(" 5.0")
+        self.peak_widthLabel = QtWidgets.QLabel("Width FWHM")
+        self.peak_widthEdit = QtWidgets.QLineEdit(" 5.0")
         self.peak_widthEdit.setValidator(validfloat)
         self.peak_widthEdit.editingFinished.connect(self.on_width_enter)
-        self.peak_widthUnit = QLabel("eV")
+        self.peak_widthUnit = QtWidgets.QLabel("eV")
         layout.addWidget(self.peak_widthLabel,row,0)
         layout.addWidget(self.peak_widthEdit,row,1)
         layout.addWidget(self.peak_widthUnit,row,2)
 
         row += 1
-        self.peak_asymmetryLabel = QLabel("Asymmetry")
-        self.peak_asymmetryEdit = QLineEdit(" 5.0")
+        self.peak_asymmetryLabel = QtWidgets.QLabel("Asymmetry")
+        self.peak_asymmetryEdit = QtWidgets.QLineEdit(" 5.0")
         self.peak_asymmetryEdit.setValidator(validfloat)
         self.peak_asymmetryEdit.editingFinished.connect(self.on_multiplier_enter)
-        self.peak_asymmetryUnit = QLabel("a.u.")
+        self.peak_asymmetryUnit = QtWidgets.QLabel("a.u.")
         layout.addWidget(self.peak_asymmetryLabel,row,0)
         layout.addWidget(self.peak_asymmetryEdit,row,1)
         layout.addWidget(self.peak_asymmetryUnit,row,2)
 
         row += 1
-        self.white_lineButton = QPushButton()
-        self.white_lineButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
+        self.white_lineButton = QtWidgets.QPushButton()
+        self.white_lineButton.setStyleSheet('QtWidgets.QPushButton {background-color: blue; color: white;}')
         self.white_lineButton.setText("White Lines")
         layout.addWidget(self.white_lineButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)       
@@ -217,20 +215,20 @@ class PeakFitDialog(QWidget):
          
         
         row += 1
-        self.ratioLabel = QLabel("Ratio:")
-        self.ratioList = QComboBox(self)
+        self.ratioLabel = QtWidgets.QLabel("Ratio:")
+        self.ratioList = QtWidgets.QComboBox(self)
         self.ratioList.addItem("None")
-        self.ratioOut = QLabel("")
+        self.ratioOut = QtWidgets.QLabel("")
         layout.addWidget(self.ratioOut,  row, 2)
         layout.addWidget(self.ratioList,  row, 1)
         layout.addWidget(self.ratioLabel,  row, 0)# self.conv_LL_Button.clicked.connect(self.update_ll_plot)
         self.ratioList.activated[str].connect(self.update_white_line_ratio)
 
         row += 1
-        self.sumLabel = QLabel("Sum:")
-        self.sumList = QComboBox(self)
+        self.sumLabel = QtWidgets.QLabel("Sum:")
+        self.sumList = QtWidgets.QComboBox(self)
         self.sumList.addItem("None")
-        self.sumOut = QLabel("")
+        self.sumOut = QtWidgets.QLabel("")
         layout.addWidget(self.sumOut,  row, 2)
         layout.addWidget(self.sumList,  row, 1)
         layout.addWidget(self.sumLabel,  row, 0)

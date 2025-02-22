@@ -1,12 +1,16 @@
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 import numpy as np
 
-class PeriodicTable(QDialog):# standard periodic table elements (q symbolizes an empty space)
+class PeriodicTable(QtWidgets.QDialog):# standard periodic table elements (q symbolizes an empty space)
         def __init__(self, parent=None):
-            super(QWidget, self).__init__(parent)
+            super(QtWidgets.QWidget, self).__init__(parent)
             self.parent = parent
             self.elements_selected = []
             
@@ -63,11 +67,11 @@ Fr,Ra,**,Rf,Db,Sg,Bh,Hs,Mt,Ds,Rg,q,q,q,q,q,q,q"""
             
 
 
-            vsizer = QVBoxLayout()
+            vsizer = QtWidgets.QVBoxLayout()
             # use grid layout
-            gsizer = QGridLayout()
+            gsizer = QtWidgets.QGridLayout()
 
-            MainGroup = QWidget()
+            MainGroup = QtWidgets.QWidget()
             
 
             #GD:font = wx.Font(10, wx.MODERN, wx.NORMAL, wx.BOLD)
@@ -78,7 +82,7 @@ Fr,Ra,**,Rf,Db,Sg,Bh,Hs,Mt,Ds,Rg,q,q,q,q,q,q,q"""
             for i in range(7):
                 for j in range(18):
                     symbol =list_pt1[index]
-                    self.button.append(QPushButton(symbol))
+                    self.button.append(QtWidgets.QPushButton(symbol))
 
                     if symbol == 'Al':
                         color = "background-color: lightgreen;\n"
@@ -98,12 +102,12 @@ Fr,Ra,**,Rf,Db,Sg,Bh,Hs,Mt,Ds,Rg,q,q,q,q,q,q,q"""
             MainGroup.setLayout(gsizer) 
             
             # sizer for Lanthanides and Actinides
-            gsizer2 = QGridLayout()
+            gsizer2 = QtWidgets.QGridLayout()
             offset = index
             for i in range(2):
                 for j in range(17):
                     symbol =list_pt2[index-offset]
-                    self.button.append(QPushButton(symbol))
+                    self.button.append(QtWidgets.QPushButton(symbol))
                     color = "background-color: pink;\n"
                     
                     self.button[index].setStyleSheet(color)
@@ -117,7 +121,7 @@ Fr,Ra,**,Rf,Db,Sg,Bh,Hs,Mt,Ds,Rg,q,q,q,q,q,q,q"""
                         gsizer2.addWidget(self.button[index],i,j)
                     index+=1
 
-            LaAc = QWidget()
+            LaAc = QtWidgets.QWidget()
             LaAc.setLayout(gsizer2) 
             
             vsizer.addWidget(MainGroup)
@@ -125,7 +129,7 @@ Fr,Ra,**,Rf,Db,Sg,Bh,Hs,Mt,Ds,Rg,q,q,q,q,q,q,q"""
             
             self.setLayout(vsizer)
 
-            OKButton  = QPushButton('OK')
+            OKButton  = QtWidgets.QPushButton('OK')
             OKButton.clicked.connect(self.OnClose)
         
             vsizer.addWidget(OKButton)

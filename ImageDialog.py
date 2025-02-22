@@ -28,6 +28,7 @@ class ImageDialog(QtWidgets.QWidget):
         self.parent = parent
         self.set_energy = True
         layout = self.get_sidbar()
+        self.atoms = None
         self.setLayout(layout)    
         self.setWindowTitle("Image")
 
@@ -126,6 +127,23 @@ class ImageDialog(QtWidgets.QWidget):
         self.refineButton.setCheckable(True)
         layout.addWidget(self.refineButton,  row, 2)
         
+
+        row += 1
+        self.processButton =  QtWidgets.QPushButton()
+        self.processButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
+        self.processButton.setText("Process")
+        layout.addWidget(self.processButton,  row,0, 1, 3)
+        layout.setColumnStretch(0, 3) 
+
+        
+        row += 1
+        self.fft_item =  pg.ImageItem()
+        win = pg.GraphicsLayoutWidget()
+        
+        self.fft_view = win.addPlot()
+        self.fft_view.addItem(self.fft_item)
+        layout.addWidget(win,  row,0, 1, 3)
+        layout.setColumnStretch(0, 3) 
         return layout
         
 
@@ -164,7 +182,22 @@ class ImageDialog(QtWidgets.QWidget):
             pixel_size_x = x[1] - x[0]
             self.atom_sizeEdit.setText(f'{pixel_size_x*4:.2f}')
             self.atom_sizeUnit.setText(x.units)
-            self.atom_sizeLabel.setText('Atom size')    
+            self.atom_sizeLabel.setText('Atom size')  
+
+            smoothing = 1
+            new_image = self.parent.dataset - self.parent.dataset.min()
+            fft_transform = (np.fft.fftshift(np.fft.fft2(new_image)))
+            fft_mag = np.abs(fft_transform)
+            fft_mag2 = scipy.ndimage.gaussian_filter(fft_mag, sigma=(smoothing, smoothing), order=0)
+            self.fft_item.setImage(np.log2(1+fft_mag2))
+            self.fft_view.setAspectLocked(True)
+
+            tr = QtGui.QTransform()  # prepare ImageItem transformation:
+            tr.scale(1/self.parent.dataset.x[-1], 1/self.parent.dataset.y[-1])       # scale horizontal and vertical axes
+            tr.translate(-len(self.parent.dataset.x)/2, -len(self.parent.dataset.y)/2) # move 3x3 image to locate center at axis origin
+
+       
+            self.fft_item.setTransform(tr) # assign transform
         
     def update_image_dataset(self, value=0):
         self.key = self.mainList.currentText().split(':')[0]
@@ -248,7 +281,7 @@ class ImageDialog(QtWidgets.QWidget):
             
     def find_atoms(self,  value=0):
         atom_size = float(self.atom_sizeEdit.displayText())
-        if hasattr(self.dataset, 'x'):
+        if hasattr(self.parent.dataset, 'x'):
             scale = self.parent.dataset.x[1]-self.parent.dataset.x[0]
         else:
             scale = 1.
@@ -269,12 +302,12 @@ class ImageDialog(QtWidgets.QWidget):
         plot_features = {}
         if 'atoms' in self.parent.dataset.metadata:
             atoms = np.array(self.parent.dataset.metadata['atoms']['positions'])[:, :2] 
-            size = self.parent.dataset.metadata['atoms']['size']
-            # pg.mkPen('r', width=size)
-            plot_features["atoms"] = pg.ScatterPlotItem(pos=np.array(atoms)[:,:2], pen=None , symbol='o', size=10, brush=pg.mkBrush(200,0,0,50), name='atoms')
-            plot_features["atoms"].setZValue(100)
-            #plot_features["atoms2"] = pg.ScatterPlotItem(pos=np.array(atoms)[:,:2]+[0,3], pen=pg.mkPen('b', width=size) , symbol='o', size=size, name='atoms')
-            plot_features["atoms3"] = pg.ScatterPlotItem(pos=np.array(atoms)[:,:2]+[2,4], pen=pg.mkPen('orange', width=1) , symbol='o', size=10, name='atoms')
+            pos = np.array(atoms)[:,:2]
+            for i in range(len(atoms)):
+                posP =  self.parent.img.mapToParent(atoms[i, 0], atoms[i, 1])
+                pos[i] = np.array([posP.x(), posP.y()])
+            plot_features["atoms"] = pos
+            print('attoms blobs', pos.shape)
             
         return plot_features   
 
