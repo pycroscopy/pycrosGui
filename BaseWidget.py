@@ -246,6 +246,17 @@ class BaseWidget(QtWidgets.QMainWindow):
         saveFile.setStatusTip('Save File')
         saveFile.triggered.connect(self.save_file)
 
+        # Show Metadata
+        showMetadata = QtWidgets.QAction('Metadata', self)
+        showMetadata.setShortcut('Ctrl+M')
+        showMetadata.setStatusTip('Show Metadata')
+        showMetadata.triggered.connect(self.show_metadata)
+
+        # Show Metadata
+        originalMetadata = QtWidgets.QAction('Original Meta', self)
+        originalMetadata.setStatusTip('Show Original Metadata')
+        originalMetadata.triggered.connect(self.show_metadata_original)
+
         self.vLegend = QtWidgets.QAction('Legend', self)
         self.vLegend.setShortcut('Ctrl+L')
         self.vLegend.setStatusTip('Switches Legend Display off and on')
@@ -260,6 +271,9 @@ class BaseWidget(QtWidgets.QMainWindow):
         
         File.addAction(openFile)
         File.addAction(saveFile)
+        
+        File.addAction(showMetadata)
+        File.addAction(originalMetadata)
         File.addAction(self.exit)
 
         view = self.menuBar().addMenu("&View")
@@ -326,15 +340,45 @@ class BaseWidget(QtWidgets.QMainWindow):
         If title is None, then the title will be hidden.
         """
         if title is None:
-            pass
-            # self.titleLabel.setVisible(False)
-            # self.view.setRowFixedHeight(0, 0)
-            #vself.titleLabel.setMaximumHeight(0)
+            self.titleLabel.setVisible(False)
         else:
-            # self.titleLabel.setMaximumHeight(30)
-            # self.view.setRowFixedHeight(0, 30)
             self.titleLabel.setVisible(True)
             self.titleLabel.setText(title, **args)
+
+    def show_metadata_original(self):
+        self.show_metadata(original=True)
+
+    def show_metadata(self, original=False):
+        dialog = QtWidgets.QDialog(self)
+        if original:
+            metadata = self.dataset.original_metadata
+            dialog.setWindowTitle("Original Metadata - " + self.dataset.title)
+        else:
+            metadata = self.dataset.metadata
+            dialog.setWindowTitle("Metadata - " + self.dataset.title)
+        dialog.resize(400, 300)
+
+        tree = QtWidgets.QTreeWidget(dialog)
+        tree.setHeaderLabels(["Key", "Value"])
+        tree.setColumnWidth(0, 150)
+        tree.setGeometry(10, 10, 380, 280)
+
+        def populate_tree(parent, data):
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    item = QtWidgets.QTreeWidgetItem([key])
+                    parent.addChild(item)
+                    populate_tree(item, value)
+                else:
+                    item = QtWidgets.QTreeWidgetItem([key, str(value)])
+                    parent.addChild(item)
+
+        root = QtWidgets.QTreeWidgetItem(["Metadata - "])
+        tree.addTopLevelItem(root)
+        populate_tree(root, metadata)
+        tree.expandAll()
+
+        dialog.exec_()
 
     def mouse_clicked(self, mouseClickEvent):
         if self.tabCurrent != 1:
@@ -362,18 +406,19 @@ class BaseWidget(QtWidgets.QMainWindow):
             self.y = y
         self.plotUpdate()
          
-    
-    def low_loss_update(self, visible):
-        if visible:
-            self.LowLossDialog.update_ll_sidebar()
+    def add_image_dataset(self, key, name, dataset, data_type='IMAGE'):
+        self.datasets[key] = dataset
+        self.datasets['_relationship'][key] = key
+        self.datasets[key].data_type = data_type
+        self.datasets[key].title = name
+        self.datasets['_relationship']['image'] = key
+        self.update_sidebar()
 
-    def core_loss_update(self, visible):
-        if visible:
-            self.CoreLossDialog.update_cl_sidebar()
-    
-    def peak_fit_update(self, visible):
-        if visible:
-            self.PeakFitDialog.update_peak_sidebar()
+    def update_sidebar(self):
+        for dock_widget in self.findChildren(QtWidgets.QDockWidget):
+            if hasattr(dock_widget.widget(), 'update_sidebar'):
+                if dock_widget.isVisible():
+                    dock_widget.widget().update_sidebar()
 
     def update_roi(self,roi):
         pass
@@ -452,10 +497,17 @@ class BaseWidget(QtWidgets.QMainWindow):
                 self.x = 0
                 self.y = 0
             self.plotUpdate()
+
+    def get_additional_metadata(self):
+        print('get additional metadata')
         
     def open_file(self, filename=None):
 
-        self.filename = pyTEMlib.file_tools.add_dataset_from_file(self.datasets, None, 'Channel', single_dataset=False)
+        self.main = pyTEMlib.file_tools.add_dataset_from_file(self.datasets, None, 'Channel', single_dataset=False)
+        print(self.main)
+        
+        #if self.filename[-3:] == 'emd':
+        #    self.get_additional_metadata()
         self.status.showMessage("opened" + list(self.datasets.keys())[0])
         self.main = list(self.datasets.keys())[0]
         self.set_dataset()

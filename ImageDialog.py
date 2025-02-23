@@ -100,53 +100,69 @@ class ImageDialog(QtWidgets.QWidget):
         # self.scaleButton.clicked.connect(self.cursor2energy_scale)
         
         row += 1
-        self.atom_sizeLabel =  QtWidgets.QLabel("atom_size")
-        self.atom_sizeEdit =  QtWidgets.QLineEdit(" 100.0")
-        self.atom_sizeEdit.setValidator(validfloat)
-        #self.atom_sizeEdit.editingFinished.connect(self.set_energy_scale)
-        self.atom_sizeUnit =  QtWidgets.QLabel("A")
-        layout.addWidget(self.atom_sizeLabel,row,0)
-        layout.addWidget(self.atom_sizeEdit,row,1)
-        layout.addWidget(self.atom_sizeUnit,row,2)
+        self.resolution_label = QtWidgets.QLabel("Resolution")
+        self.resolution_edit = QtWidgets.QLineEdit("0.1")
+        self.resolution_edit.setValidator(validfloat)
+        self.resolution_edit.editingFinished.connect(self.set_resolution)
+        self.resolution_unit = QtWidgets.QLabel("A")
+        layout.addWidget(self.resolution_label,row,0)
+        layout.addWidget(self.resolution_edit,row,1)
+        layout.addWidget(self.resolution_unit,row,2)
         
         row += 1
-        self.deconButton =  QtWidgets.QPushButton()
+        self.deconButton = QtWidgets.QPushButton()
         self.deconButton.setText("LR Decon")
         self.deconButton.setCheckable(True)
         layout.addWidget(self.deconButton,  row, 0)
         self.deconButton.clicked.connect(self.decon_lr)
         
-        self.atomsButton =  QtWidgets.QPushButton()
+        self.atomsButton = QtWidgets.QPushButton()
         self.atomsButton.setText("Find Atoms")
         self.atomsButton.setCheckable(True)
         layout.addWidget(self.atomsButton,  row, 1)
         self.atomsButton.clicked.connect(self.find_atoms)
         
-        self.refineButton =  QtWidgets.QPushButton()
+        self.refineButton = QtWidgets.QPushButton()
         self.refineButton.setText("Refine Atoms")
         self.refineButton.setCheckable(True)
         layout.addWidget(self.refineButton,  row, 2)
         
 
         row += 1
-        self.processButton =  QtWidgets.QPushButton()
+        self.processButton = QtWidgets.QPushButton()
         self.processButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
-        self.processButton.setText("Process")
+        self.processButton.setText("Fourier Space")
         layout.addWidget(self.processButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
-
         
         row += 1
         self.fft_item =  pg.ImageItem()
         win = pg.GraphicsLayoutWidget()
-        
         self.fft_view = win.addPlot()
         self.fft_view.addItem(self.fft_item)
+        self.fft_resolution = pg.CircleROI(pos=[-.1, -.1], radius=0.1, pen=(0,9), parent=self.fft_item)
+        self.fft_resolution.sigRegionChangeFinished.connect(self.fft_changed)
+        
+        self.fft_view.addItem(self.fft_resolution)
+        
         layout.addWidget(win,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
         return layout
-        
+    
+    def fft_changed(self, roi):
+        radius = self.fft_resolution.size()[0]/2
+        self.fft_resolution.sigRegionChangeFinished.disconnect()
+        self.fft_resolution.setPos(pos=[-radius, -radius], update=True)
+        self.resolution_edit.setText(f'{1/radius:.2f}')
+        self.resolution_unit.setText(self.parent.dataset.x.units)
+        self.fft_resolution.sigRegionChangeFinished.connect(self.fft_changed)
 
+    def set_resolution(self):
+        resolution = 1/float(self.resolution_edit.displayText())
+        self.fft_resolution.setSize([resolution*2, resolution*2])
+        self.resolution_unit.setText(self.parent.dataset.x.units)
+        
+        
     def update_sidebar(self):
         if '_relationship' not in self.parent.datasets:
             return
@@ -175,17 +191,14 @@ class ImageDialog(QtWidgets.QWidget):
         self.update_image_dataset()
             
         if 'IMAG' in self.parent.dataset.data_type.name:
-            dims = self.parent.dataset.get_dimensions_by_type(sidpy.DimensionType.SPATIAL, return_axis=True)
-            if len(dims) <1:
-                dims  = self.parent.dataset.get_dimensions_by_type(sidpy.DimensionType.RECIPROCAL, return_axis=True)
-            x = dims[0]
-            pixel_size_x = x[1] - x[0]
-            self.atom_sizeEdit.setText(f'{pixel_size_x*4:.2f}')
-            self.atom_sizeUnit.setText(x.units)
-            self.atom_sizeLabel.setText('Atom size')  
-
+            
             smoothing = 1
-            new_image = self.parent.dataset - self.parent.dataset.min()
+            print('update fft')
+            if self.parent.dataset.data_type.name == 'IMAGE_STACK':
+                new_image = np.array(self.parent.dataset.mean(axis=0))
+            else:
+                new_image = np.array(self.parent.dataset)
+            new_image -= new_image.min()
             fft_transform = (np.fft.fftshift(np.fft.fft2(new_image)))
             fft_mag = np.abs(fft_transform)
             fft_mag2 = scipy.ndimage.gaussian_filter(fft_mag, sigma=(smoothing, smoothing), order=0)
@@ -195,10 +208,8 @@ class ImageDialog(QtWidgets.QWidget):
             tr = QtGui.QTransform()  # prepare ImageItem transformation:
             tr.scale(1/self.parent.dataset.x[-1], 1/self.parent.dataset.y[-1])       # scale horizontal and vertical axes
             tr.translate(-len(self.parent.dataset.x)/2, -len(self.parent.dataset.y)/2) # move 3x3 image to locate center at axis origin
-
-       
             self.fft_item.setTransform(tr) # assign transform
-        
+           
     def update_image_dataset(self, value=0):
         self.key = self.mainList.currentText().split(':')[0]
         if self.key not in self.parent.datasets.keys():
@@ -211,76 +222,66 @@ class ImageDialog(QtWidgets.QWidget):
         self.parent.plotUpdate()
        
     def sum_stack(self, value=0):
-        if self.dataset.data_type.name == 'IMAGE_STACK':
+        if self.parent.dataset.data_type.name == 'IMAGE_STACK':
             dims = self.parent.dataset.get_dimensions_by_type(sidpy.DimensionType.TEMPORAL, return_axis=False)
             key =f'Sum-{self.parent.main}'
-            name = f'Sum-{self.dataset.title}'
+            name = f'Sum-{self.parent.dataset.title.split('-')[0]}'
             dataset = self.parent.dataset.sum(axis=dims[0])
             dataset.metadata = self.parent.dataset.metadata.copy()
-            self.add_image_dataset(key, name, dataset, data_type='IMAGE')
+            self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE')
             
     def average_stack(self, value=0):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
             dims = self.parent.dataset.get_dimensions_by_type(sidpy.DimensionType.TEMPORAL, return_axis=False)
             key =f'Sum-{self.parent.main}'
-            name = f'Sum-{self.dataset.title}'
+            name = f'Sum-{self.dataset.title.split('-')[0]}'
             dataset = self.parent.dataset.mean(axis=dims[0])
             dataset.metadata = self.parent.dataset.metadata.copy()
-            self.add_image_dataset(key, name, dataset, data_type='IMAGE')
+            self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE')
            
     def rigid_registration(self, checked):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
-            key =f'RigidReg-{self.parent.main}'
-            name = f'RigidReg-{self.dataset.title}'
+            key =f'RigidReg-{self.parent.main.split("-")[-1]}'
+            name = f'RigidReg-{self.dataset.title.split("-")[-1]}'
             dataset = image_tools.rigid_registration(self.parent.dataset)
-            dataset.metadata = self.parent.dataset.metadata.copy()
-            self.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
+            dataset.metadata.update(self.parent.dataset.metadata)
+            self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.rigid_regButton.setChecked(False)
 
     def demon_registration(self,  value=0):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
-            key =f'DemonReg-{self.parent.main}'
-            name = f'DemonReg-{self.dataset.title}'
+            key =f'DemonReg-{self.parent.main.split("-")[-1]}'
+            name = f'DemonReg-{self.dataset.title.split("-")[-1]}'
             dataset = image_tools.demon_registration(self.parent.dataset)
-            dataset.metadata = self.parent.dataset.metadata.copy()
-            self.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
+            dataset.metadata.update(self.parent.dataset.metadata)
+            self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.demon_regButton.setChecked(False)
-        
-    def add_image_dataset(self, key, name, dataset, data_type='IMAGE'):
-        self.parent.datasets[key] = dataset
-        self.parent.datasets['_relationship'][key] = key
-        self.parent.datasets[key].data_type = data_type
-        self.parent.datasets[key].title = name
-        self.parent.datasets['_relationship']['image'] = key
-        self.update_sidebar()
         
     def decon_lr(self):
         if self.parent.dataset.data_type.name != 'IMAGE':
             return
             
         if 'probe' not in self.parent.dataset.metadata.keys():
-            print('decon 1')
-            atom_size = float(self.atom_sizeEdit.displayText())
-            if hasattr(self.dataset, 'x'):
+            atom_size = float(self.resolution_edit.displayText())*2
+            if hasattr(self.parent.dataset, 'x'):
                 scale = self.parent.dataset.x[1]-self.parent.dataset.x[0]
             else:
                 scale = 1.
-            
             gauss_diameter = atom_size/scale
             probe = pyTEMlib.probe_tools.make_gauss(self.parent.dataset.shape[0], self.parent.dataset.shape[1], gauss_diameter)
         else:
             probe = self.parent.dataset.metadata['probe']['probe']
       
         print('Deconvolution of ', self.parent.dataset.title)
-        LR_dataset = image_tools.decon_lr(self.dataset, probe, verbose=False)
-        key =f'LRdeconvol-{self.parent.main}'
-        name = f'LRdeconvol-{self.dataset.title}'
-        self.add_image_dataset(key, name, LR_dataset, data_type='IMAGE')
+        LR_dataset = image_tools.decon_lr(self.parent.dataset, probe, verbose=False)
+        key =f'LRdeconvol-{self.parent.main.split("-")[-1]}'
+        name = f'LRdeconvol-{self.dataset.title.split("-")[-1]}'
+        self.parent.add_image_dataset(key, name, LR_dataset, data_type='IMAGE')
         
         self.deconButton.setChecked(False)
             
     def find_atoms(self,  value=0):
-        atom_size = float(self.atom_sizeEdit.displayText())
+        atom_size = float(self.resolution_edit.displayText())
         if hasattr(self.parent.dataset, 'x'):
             scale = self.parent.dataset.x[1]-self.parent.dataset.x[0]
         else:
@@ -307,8 +308,6 @@ class ImageDialog(QtWidgets.QWidget):
                 posP =  self.parent.img.mapToParent(atoms[i, 0], atoms[i, 1])
                 pos[i] = np.array([posP.x(), posP.y()])
             plot_features["atoms"] = pos
-            print('attoms blobs', pos.shape)
-            
         return plot_features   
 
    

@@ -87,6 +87,7 @@ class InfoDialog(QtWidgets.QWidget):
         self.experimentButton = QtWidgets.QPushButton()
         self.experimentButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
         self.experimentButton.setText("Experimental Conditions")
+        self.experimentButton.clicked.connect(self.parent.show_metadata)
         layout.addWidget(self.experimentButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)        
         
@@ -199,8 +200,6 @@ class InfoDialog(QtWidgets.QWidget):
         layout.addWidget(self.VOAEdit,row,1)
         layout.addWidget(self.VOAUnit,row,2)
         
-        
-        
         return layout
         
     def set_dataset(self):
@@ -239,6 +238,9 @@ class InfoDialog(QtWidgets.QWidget):
                 pass # self.info_tab[14, 0].disabled = False
             self.flux_ppmEdit.setText(f"{self.parent.datasets[self.parent.main].metadata['experiment']['flux_ppm']:.2f}")
         
+    def update_sidebar(self):
+        self.updateInfo()
+    
     def updateInfo(self):
         if '_relationship' not in self.parent.datasets:
             return
@@ -302,22 +304,38 @@ class InfoDialog(QtWidgets.QWidget):
             self.dispersionEdit.setText(f'{pixel_size_y:.3f}')
             self.dispersionUnit.setText('nm')
             self.dispersionLabel.setText('Pixel size y')    
+
         
         if 'experiment' in self.parent.dataset.metadata:
             if 'exposure_time' in self.parent.dataset.metadata['experiment']:
                 self.timeEdit.setText(f"{self.parent.dataset.metadata['experiment']['exposure_time']:.3f}")
+                self.timeUnit.setText('s')
             else:
                 self.timeEdit.setText('0')
             if 'convergence_angle' in self.parent.dataset.metadata['experiment']:
-                self.convEdit.setText(f"{self.parent.dataset.metadata['experiment']['convergence_angle']}")
+                self.convEdit.setText(f"{self.parent.dataset.metadata['experiment']['convergence_angle']*1000:.1f}")
             else:
                 self.convEdit.setText('0')
             if 'collection_angle' in self.parent.dataset.metadata['experiment']:
-                self.collEdit.setText(f"{self.parent.dataset.metadata['experiment']['collection_angle']}")
+                col_angle = self.parent.dataset.metadata['experiment']['collection_angle']*1000
+                if 'collection_angle_end' in self.parent.dataset.metadata['experiment']:
+                    col_angle_end = self.parent.dataset.metadata['experiment']['collection_angle_end']*1000
+                    self.collEdit.setText(f"{col_angle:.1f}-{col_angle_end:.1f}")
+                else:
+                    self.collEdit.setText(f"{col_angle:.1f}")
             else:
                 self.collEdit.setText('0')
             if 'acceleration_voltage' in self.parent.dataset.metadata['experiment']:
-                self.E0Edit.setText(f"{self.parent.dataset.metadata['experiment']['acceleration_voltage']/1000:.0f}")
+                self.E0Edit.setText(f"{self.parent.dataset.metadata['experiment']['acceleration_voltage']/1000:.1f}")
+
+            if 'current' in self.parent.dataset.metadata['experiment']:
+                current = self.parent.dataset.metadata['experiment']['current']
+                self.VOAEdit.setText(f"{current*1e12:.2f}")
+                self.fluxEdit.setText(f"{current/scipy.constants.elementary_charge:.3f}")
+                if 'pixel_time'in self.parent.dataset.metadata['experiment']:
+                    pixel_time = self.parent.dataset.metadata['experiment']['pixel_time']
+                    self.flux_ppmEdit.setText(f"{current//scipy.constants.elementary_charge*pixel_time:.1f}")
+                    self.flux_ppmUnit.setText('e<sup>-</sup>/pixel')
         else:
             self.parent.dataset.metadata['experiment'] = {}
 

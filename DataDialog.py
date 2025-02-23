@@ -18,6 +18,11 @@
 #           ** changed to reflect Libra and pA ** Nov 2012
 #       
 #####################################################################
+from PyQt5 import QtCore
+from PyQt5 import QtGui
+from PyQt5 import QtWidgets
+
+
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
@@ -25,7 +30,7 @@ from PyQt5.QtWidgets import *
 import os as os
 import numpy as np
 
-class DataDialog(QWidget):
+class DataDialog(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(DataDialog, self).__init__(parent)
     
@@ -36,41 +41,41 @@ class DataDialog(QWidget):
         self.setWindowTitle("Datasets")
 
     def get_sidbar(self): 
-        layout = QGridLayout()
+        layout = QtWidgets.QGridLayout()
 
         row = 0 
-        label =  QLabel("Spectral Data")
+        label =  QtWidgets.QLabel("Spectral Data")
         layout.addWidget(label,  row, 0)
 
         row += 1
-        self.spectrum_list = QListWidget()
+        self.spectrum_list = QtWidgets.QListWidget()
         self.spectrum_list.addItems(["None"])
         layout.addWidget(self.spectrum_list,  row, 0, 1, 3)
         self.spectrum_list.itemClicked.connect(self.plotUpdate)
         
         row += 1
-        label =  QLabel("Survey Data")
+        label =  QtWidgets.QLabel("Survey Data")
         layout.addWidget(label,  row, 0)
         row += 1
-        self.survey_list = QListWidget()
+        self.survey_list = QtWidgets.QListWidget()
         self.survey_list.addItems(["None"])
         layout.addWidget(self.survey_list,  row, 0, 1, 3)
         self.survey_list.itemClicked.connect(self.plotUpdate)
         
         row += 1
-        label =  QLabel("Image Data")
+        label =  QtWidgets.QLabel("Image Data")
         layout.addWidget(label,  row, 0)
         row += 1
-        self.image_list = QListWidget()
+        self.image_list = QtWidgets.QListWidget()
         self.image_list.addItems(["None"])
         layout.addWidget(self.image_list,  row, 0, 1, 3)
         self.image_list.itemClicked.connect(self.plotUpdate)
         
         row += 1
-        label =  QLabel("Structures")
+        label =  QtWidgets.QLabel("Structures")
         layout.addWidget(label,  row, 0)
         row += 1
-        self.structure_list = QListWidget()
+        self.structure_list = QtWidgets.QListWidget()
         self.structure_list.addItems(["None"])
         layout.addWidget(self.structure_list,  row, 0, 1, 3)
         #self.structure_list.itemClicked.connect(self.plotUpdate)
@@ -78,12 +83,16 @@ class DataDialog(QWidget):
         
         return layout
 
+    def update_sidebar(self):
+        pass
+
+
     def plotUpdate(self, item):
         
         if self.parent.dataset is not None:
             if self.parent.dataset.data_type.name == 'SPECTRUM':
-                modifiers = QApplication.keyboardModifiers()
-                if modifiers == Qt.ShiftModifier:
+                modifiers = QtWidgets.QApplication.keyboardModifiers()
+                if modifiers == QtGui.Qt.ShiftModifier:
                     self.parent.add_spectrum.append(item.text().split(':')[0])
                     self.parent.plotUpdate()
                     return
