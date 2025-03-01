@@ -72,11 +72,6 @@ class MainWidget(BaseWidget):
         
         self.DataWidget.raise_()
 
-    def updateRoiPlot(self):
-        self.get_image
-        global img, roi, data, p2
-        selected = roi.getArrayRegion(data, img)
-        p2.plot(selected.mean(axis=0), clear=True)
 
 
     def plot_additional_features(self, plt):

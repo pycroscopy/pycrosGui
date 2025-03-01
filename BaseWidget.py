@@ -14,11 +14,11 @@ from PyQt5 import QtWidgets
 
 import os as os
 import numpy as np
-import scipy as scipy
 
 import pyqtgraph as pg
 import sys
-sys.path.insert(0, '../pyTEMlib')
+sys.path.insert(0, '../pyTEMlib/')
+
 
 # =============================================================
 #   Include pycroscopy Libraries                                      #
@@ -330,7 +330,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         j = int(np.clip(j, 0, data.shape[1] - 1))
         val = data[i, j]
         ppos = self.img.mapToParent(pos)
-        x, y = ppos.x(), ppos.y()
+        x = ppos.x()
         units = self.dataset.x.units
         self.setTitle(f"pos: ({x:0.1f}, {x:0.1f}){units} - pixel: ({i:d}, {j:d})  value: {val:3g}")
 
@@ -546,7 +546,6 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.setWindowTitle('PyCrosGUI version '+str(1) +' serial #: 1 - ')# +tags['filename'])
         
     def save_file(self, filename=None):
-        import warnings
         file_name = self.datasets[self.main].title+'.hf5'
         h5_group = pyTEMlib.file_tools.save_dataset(self.datasets, file_name, qt=True)
         h5_group.file.close()   
@@ -685,6 +684,8 @@ class BaseWidget(QtWidgets.QMainWindow):
             scale.anchor((1, 1), (1, 1), offset=(-20, -20))
             
             self.plot_additional_features(self.view)
+            self.view.setRange(xRange=[x[0], x[-1]], yRange=[y[0], y[-1]], padding=0)   
+            
             """# self.plotParamWindow3.autoRange()
             
             print('new)')

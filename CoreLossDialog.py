@@ -18,7 +18,6 @@
 #           ** changed to reflect Libra and pA ** Nov 2012
 #       
 #####################################################################
-from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 

@@ -19,6 +19,7 @@
 #       
 #####################################################################
 from PyQt5 import QtWidgets
+from PyQt5 import QtGui
 
 import numpy as np
 import sidpy
@@ -26,7 +27,6 @@ import scipy
 
 from pyTEMlib import eels_tools
 
-from periodic_table import PeriodicTable
 
 class PeakFitDialog(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -45,8 +45,8 @@ class PeakFitDialog(QtWidgets.QWidget):
         
 
     def get_sidbar(self): 
-        validfloat = QtWidgets.QDoubleValidator()
-        validint = QtWidgets.QIntValidator()        
+        validfloat = QtGui.QDoubleValidator()
+        validint = QtGui.QIntValidator()        
         
         layout = QtWidgets.QGridLayout()
         row = 0 
@@ -294,24 +294,6 @@ class PeakFitDialog(QtWidgets.QWidget):
         # self.set_additional_spectra()
         self.parent.plotUpdate()
 
-    
-    def get_spectrum(self, key=None):
-        if key is None:
-            dataset = self.parent.dataset 
-        elif key in self.parent.datasets:
-            dataset = self.parent.datasets[key]
-        else:
-            return
-
-        if dataset.data_type.name == 'SPECTRUM':
-            self.parent.x = 0
-            self.parent.y = 0
-            spectrum = dataset
-        else:
-            spectrum = dataset[self.parent.x, self.parent.y]
-        spectrum.data_type ='SPECTRUM'
-        return spectrum
-
     def set_peak_list(self):
         if 'peaks' not in self.peaks:
             self.peaks['peaks'] = {}
@@ -332,7 +314,6 @@ class PeakFitDialog(QtWidgets.QWidget):
         self.fit_startEdit.setText(f"{self.peaks['fit_start']:.2f}")
         self.fit_endEdit.setText(f"{self.peaks['fit_end']:.2f}")
 
-        item = self.peakList.currentText()
         peak_index = self.peakList.currentIndex()
         
         if str(peak_index) not in self.peaks['peaks']:
@@ -472,7 +453,6 @@ class PeakFitDialog(QtWidgets.QWidget):
     
         return spectrum
 
-
     def get_additional_spectra(self):        
         spectrum = self.get_spectrum()
         energy_scale = spectrum.get_spectral_dims(return_axis=True)[0].values
@@ -565,8 +545,7 @@ class PeakFitDialog(QtWidgets.QWidget):
        
         energy_scale = full_energy_scale[start_channel:end_channel]
         # select the core loss model if it exists. Otherwise, we will fit to the full spectrum.
-        x = self.parent.x
-        y = self.parent.y
+        
         
         # if we have a core loss model we will only fit the difference between the model and the data.
         difference = np.array(spectrum[start_channel:end_channel] - self.model[start_channel:end_channel])

@@ -16,10 +16,9 @@ from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
 import PyQt5
+import sys
+sys.path.insert(0, '../pyTEMlib/')
 
 import os as os
 import numpy as np
@@ -28,22 +27,24 @@ import scipy as scipy
 import pyqtgraph as pg
 
 # =============================================================
-#   Include Quantifit Libraries                                      #
+#   Include pycroscopy Libraries                                      #
 # =============================================================
-# global frame  
 import sidpy
+
+# =============================================================
+#   Include pycroscopy Dialogs                                      #
+# =============================================================
 
 from BaseWidget import BaseWidget
 from InfoDialog import InfoDialog
 from LowLossDialog import LowLossDialog
 from CoreLossDialog import CoreLossDialog
 from PeakFitDialog import PeakFitDialog
-
+from ImageDialog import ImageDialog
 
 # =======================================================================================================
 #                                      Main Window Module                                               #
 # =======================================================================================================
-
 
 class MainWidget(BaseWidget):
     def __init__(self, filename=None):
@@ -76,20 +77,30 @@ class MainWidget(BaseWidget):
         self.PeakFitWidget.setFeatures(PyQt5.QtWidgets.QDockWidget.DockWidgetMovable |
                               PyQt5.QtWidgets.QDockWidget.DockWidgetFloatable)
         self.PeakFitWidget.setWidget(self.PeakFitDialog)# Add the dock to the main window
+
+        self.ImageWidget = PyQt5.QtWidgets.QDockWidget("Image", self)
+        self.ImageDialog = ImageDialog(self)
+        self.ImageWidget.setFeatures(PyQt5.QtWidgets.QDockWidget.DockWidgetMovable |
+                              PyQt5.QtWidgets.QDockWidget.DockWidgetFloatable)
+        self.ImageWidget.setWidget(self.ImageDialog)# Add the dock to the main window
         
         self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.LowLossWidget)
         self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.CoreLossWidget)
         self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.PeakFitWidget)
+        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.ImageWidget)
         
         self.tabifyDockWidget(self.InfoWidget, self.LowLossWidget)
         self.tabifyDockWidget(self.LowLossWidget, self.CoreLossWidget)
-        self.tabifyDockWidget(self.CoreLossWidget, self.PeakFitWidget, )
+        self.tabifyDockWidget(self.CoreLossWidget, self.PeakFitWidget)
+        self.tabifyDockWidget(self.PeakFitWidget, self.ImageWidget)
         
         self.LowLossWidget.visibilityChanged.connect(self.low_loss_update)
         self.CoreLossWidget.visibilityChanged.connect(self.core_loss_update)
         self.PeakFitWidget.visibilityChanged.connect(self.peak_fit_update)
-
+        self.ImageWidget.visibilityChanged.connect(self.image_update)
+        
         self.DataWidget.raise_()
+
 
     def plot_additional_features(self, plt):
         """
@@ -98,12 +109,22 @@ class MainWidget(BaseWidget):
 
         """
         super().plot_additional_features(plt)
-        ene = np.array(self.dataset.get_spectral_dims(return_axis=True)[0])
-        energy_scale = np.append(ene, ene[-1])
+        if 'SPEC' in self.dataset.data_type.name:
+            ene = np.array(self.dataset.get_spectral_dims(return_axis=True)[0])
+            energy_scale = np.append(ene, ene[-1])
         
         additional_features = {}
         if 'additional_features' not in self.dataset.metadata['plot']:
-           pass
+            pass
+        elif 'Image' in self.dataset.metadata['plot']['additional_features']:
+                additional_features = self.ImageDialog.get_additional_features()
+                if 'atoms' in additional_features:
+                    self.blobs.setData(pos=additional_features['atoms'])
+                    self.blobs.setVisible(True)
+                    del additional_features['atoms']
+                else:
+                    self.blobs.setData(pos=[[0,0]])
+                    self.blobs.setVisible(False)
         elif 'LowLoss' in self.dataset.metadata['plot']['additional_features']:
             additional_features = self.LowLossDialog.get_additional_features()
         elif 'CoreLoss' in self.dataset.metadata['plot']['additional_features']:
@@ -111,6 +132,7 @@ class MainWidget(BaseWidget):
             self.plot_features = additional_features
         elif 'PeakFit' in self.dataset.metadata['plot']['additional_features']:
             additional_features = self.PeakFitDialog.get_additional_features()
+
         
         additional_spectra = {}
         if 'additional_spectra' not in self.dataset.metadata['plot']:
@@ -134,7 +156,7 @@ class MainWidget(BaseWidget):
         for key, item in additional_features.items():
             plt.addItem(item)
 
-    
+
     def low_loss_update(self, visible):
         if visible:
             self.LowLossDialog.update_ll_sidebar()
@@ -146,6 +168,11 @@ class MainWidget(BaseWidget):
     def peak_fit_update(self, visible):
         if visible:
             self.PeakFitDialog.update_peak_sidebar()
+    
+    def image_update(self, visible):
+        if visible:
+            self.ImageDialog.update_sidebar()
+
 
 
 def main(args=[]):

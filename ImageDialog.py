@@ -228,6 +228,7 @@ class ImageDialog(QtWidgets.QWidget):
             name = f'Sum-{self.parent.dataset.title.split('-')[0]}'
             dataset = self.parent.dataset.sum(axis=dims[0])
             dataset.metadata = self.parent.dataset.metadata.copy()
+            self.parent.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE')
             
     def average_stack(self, value=0):
@@ -237,30 +238,32 @@ class ImageDialog(QtWidgets.QWidget):
             name = f'Sum-{self.dataset.title.split('-')[0]}'
             dataset = self.parent.dataset.mean(axis=dims[0])
             dataset.metadata = self.parent.dataset.metadata.copy()
+            
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE')
-           
+            
     def rigid_registration(self, checked):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
             key =f'RigidReg-{self.parent.main.split("-")[-1]}'
-            name = f'RigidReg-{self.dataset.title.split("-")[-1]}'
+            name = f'RigidReg-{self.parent.dataset.title.split("-")[-1]}'
             dataset = image_tools.rigid_registration(self.parent.dataset)
             dataset.metadata.update(self.parent.dataset.metadata)
+            self.parent.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.rigid_regButton.setChecked(False)
 
     def demon_registration(self,  value=0):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
             key =f'DemonReg-{self.parent.main.split("-")[-1]}'
-            name = f'DemonReg-{self.dataset.title.split("-")[-1]}'
+            name = f'DemonReg-{self.parent.dataset.title.split("-")[-1]}'
             dataset = image_tools.demon_registration(self.parent.dataset)
             dataset.metadata.update(self.parent.dataset.metadata)
+            self.parent.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.demon_regButton.setChecked(False)
         
     def decon_lr(self):
         if self.parent.dataset.data_type.name != 'IMAGE':
             return
-            
         if 'probe' not in self.parent.dataset.metadata.keys():
             atom_size = float(self.resolution_edit.displayText())*2
             if hasattr(self.parent.dataset, 'x'):
@@ -268,14 +271,20 @@ class ImageDialog(QtWidgets.QWidget):
             else:
                 scale = 1.
             gauss_diameter = atom_size/scale
+            if gauss_diameter < 3:
+                gauss_diameter = 3.0
+            print('gauss_diameter', gauss_diameter)
             probe = pyTEMlib.probe_tools.make_gauss(self.parent.dataset.shape[0], self.parent.dataset.shape[1], gauss_diameter)
         else:
             probe = self.parent.dataset.metadata['probe']['probe']
       
         print('Deconvolution of ', self.parent.dataset.title)
         LR_dataset = image_tools.decon_lr(self.parent.dataset, probe, verbose=False)
+        print(LR_dataset, LR_dataset.min(), LR_dataset.max()) 
         key =f'LRdeconvol-{self.parent.main.split("-")[-1]}'
         name = f'LRdeconvol-{self.dataset.title.split("-")[-1]}'
+        self.parent.metadata['plot']['additional_features'] = {}
+        
         self.parent.add_image_dataset(key, name, LR_dataset, data_type='IMAGE')
         
         self.deconButton.setChecked(False)
