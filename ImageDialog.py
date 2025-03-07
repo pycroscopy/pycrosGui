@@ -7,7 +7,6 @@
 #       
 #       
 ####################################################################
-from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 import pyqtgraph as pg
@@ -19,6 +18,8 @@ import scipy
 from pyTEMlib import image_tools
 import pyTEMlib.probe_tools
 import pyTEMlib.atom_tools
+
+import skimage.feature 
 
 
 class ImageDialog(QtWidgets.QWidget):
@@ -34,7 +35,6 @@ class ImageDialog(QtWidgets.QWidget):
 
     def get_sidbar(self): 
         validfloat = QtGui.QDoubleValidator()
-        validint = QtGui.QIntValidator()     
         
         layout = QtWidgets.QGridLayout()
         row = 0 
@@ -116,14 +116,14 @@ class ImageDialog(QtWidgets.QWidget):
         layout.addWidget(self.deconButton,  row, 0)
         self.deconButton.clicked.connect(self.decon_lr)
         
-        self.atomsButton = QtWidgets.QPushButton()
-        self.atomsButton.setText("Find Atoms")
-        self.atomsButton.setCheckable(True)
-        layout.addWidget(self.atomsButton,  row, 1)
-        self.atomsButton.clicked.connect(self.find_atoms)
+        self.svdButton = QtWidgets.QPushButton()
+        self.svdButton.setText("Simple Clean")
+        self.svdButton.setCheckable(True)
+        layout.addWidget(self.svdButton,  row, 1)
+        self.svdButton.clicked.connect(self.svd_clean)
         
         self.refineButton = QtWidgets.QPushButton()
-        self.refineButton.setText("Refine Atoms")
+        self.refineButton.setText("")
         self.refineButton.setCheckable(True)
         layout.addWidget(self.refineButton,  row, 2)
         
@@ -134,6 +134,7 @@ class ImageDialog(QtWidgets.QWidget):
         self.processButton.setText("Fourier Space")
         layout.addWidget(self.processButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
+        self.processButton.clicked.connect(self.adaptive_fourier_filter)
         
         row += 1
         self.fft_item =  pg.ImageItem()
@@ -145,8 +146,46 @@ class ImageDialog(QtWidgets.QWidget):
         
         self.fft_view.addItem(self.fft_resolution)
         
+        pos = np.array([[0,0]])
+        self.blobs = pg.ScatterPlotItem(pos=pos, pen=(255,0,0) , symbol='o', size=10, brush=pg.mkBrush(200,0,0), name='bragg')
+        #self.blobs.setZValue(100)
+        self.blobs.setVisible(True)
+        self.low_pass= pg.ScatterPlotItem(pos=pos,  symbol='o', size=5, pen=(0,0, 255), brush=pg.mkBrush(0,0,200, 50), name='low_loss')
+        #self.low_pass.setZValue(200)
+        self.low_pass.setVisible(True)
+        
+        self.fft_view.addItem(self.blobs)
+        self.fft_view.addItem(self.low_pass)
+        
         layout.addWidget(win,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
+        
+        row += 1
+        self.low_pass_label = QtWidgets.QLabel("Low-pass")
+        self.low_pass_edit = QtWidgets.QLineEdit("3")
+        self.low_pass_edit.setValidator(validfloat)
+        self.low_pass_edit.editingFinished.connect(self.set_resolution)
+        self.low_pass_unit = QtWidgets.QLabel("1/nm")
+        layout.addWidget(self.low_pass_label,row,0)
+        layout.addWidget(self.low_pass_edit,row,1)
+        layout.addWidget(self.low_pass_unit,row,2)
+        
+        
+        row += 1
+        self.blobThreshold_label = QtWidgets.QLabel("Threshold")
+        self.blobThreshold_edit = QtWidgets.QLineEdit("0.1")
+        self.blobThreshold_edit.setValidator(validfloat)
+        self.blobThreshold_edit.editingFinished.connect(self.set_resolution)
+        
+        layout.addWidget(self.blobThreshold_label,row,0)
+        layout.addWidget(self.blobThreshold_edit,row,1)
+        
+        self.maskButton = QtWidgets.QPushButton()
+        self.maskButton.setText("Find Mask")
+        self.maskButton.setCheckable(True)
+        layout.addWidget(self.maskButton,  row, 2)
+        self.maskButton.clicked.connect(self.add_mask)
+        
         return layout
     
     def fft_changed(self, roi):
@@ -156,6 +195,61 @@ class ImageDialog(QtWidgets.QWidget):
         self.resolution_edit.setText(f'{1/radius:.2f}')
         self.resolution_unit.setText(self.parent.dataset.x.units)
         self.fft_resolution.sigRegionChangeFinished.connect(self.fft_changed)
+    
+    def add_mask(self):
+        if self.parent.dataset.data_type.name == 'IMAGE': 
+            
+            spot_threshold = float(self.blobThreshold_edit.displayText())
+            low_pass = float(self.low_pass_edit.displayText())
+            self.low_pass.setVisible(True)
+            
+            FOV_x = self.parent.dataset.x[-1]
+            FOV_y = self.parent.dataset.y[-1]
+            self.low_pass.setSize(low_pass*FOV_x)
+            
+            spots = diffractogram_spots(self.fft_mag, FOV_x, FOV_y, spot_threshold=spot_threshold)
+            
+            #
+            for i in range(len(spots)):
+                posP =  self.fft_item.mapToParent(spots[i, 0], spots[i, 1])
+                print(posP, spots[i])
+                spots[i] = np.array([posP.x(), posP.y()])
+            spots = spots[np.linalg.norm(spots[:,:2],axis=1)<20, :]
+            spots = spots[np.linalg.norm(spots[:,:2],axis=1)>0.5, :]
+            self.blobs.setData(pos=spots)
+            self.blobs.setZValue(300)
+            self.blobs.setVisible(True)
+            self.low_pass.setVisible(True)
+            self.low_pass.setZValue(300)
+            self.parent.dataset.metadata['fourier'] = {'spots': spots,
+                                                       'threshold': spot_threshold,
+                                                       'low_path': low_pass}
+            
+            print('add mask')
+            
+            """ if self.maskButton.setChecked(True):
+            self.blobs.setVisible(True)
+        else:
+            self.blobs.setVisible(False)"""
+            
+    def adaptive_fourier_filter(self):
+        if 'fourier' in self.parent.dataset.metadata:
+            low_pass = float(self.low_pass_edit.displayText())
+            spots = self.parent.dataset.metadata['fourier']['spots']
+  
+            filtered_dataset = pyTEMlib.image_tools.adaptive_fourier_filter(self.parent.dataset, spots, 
+                                                                    low_pass=low_pass, reflection_radius=.3)
+            key =f'AFF-{self.parent.main}'
+            name = f'AFF-{self.parent.dataset.title.split('-')[0]}'
+            
+            filtered_dataset.metadata = self.parent.dataset.metadata.copy()
+            self.parent.dataset.metadata['plot']['additional_features'] = {}
+            self.parent.add_image_dataset(key, name, filtered_dataset, data_type='IMAGE')
+            self.blobs.setVisible(False)
+            self.low_pass.setVisible(False)
+        
+        
+    
 
     def set_resolution(self):
         resolution = 1/float(self.resolution_edit.displayText())
@@ -189,7 +283,9 @@ class ImageDialog(QtWidgets.QWidget):
         self.mainList.setCurrentIndex(image_index)
         
         self.update_image_dataset()
-            
+        
+        
+    def update_fft(self):            
         if 'IMAG' in self.parent.dataset.data_type.name:
             
             smoothing = 1
@@ -201,8 +297,8 @@ class ImageDialog(QtWidgets.QWidget):
             new_image -= new_image.min()
             fft_transform = (np.fft.fftshift(np.fft.fft2(new_image)))
             fft_mag = np.abs(fft_transform)
-            fft_mag2 = scipy.ndimage.gaussian_filter(fft_mag, sigma=(smoothing, smoothing), order=0)
-            self.fft_item.setImage(np.log2(1+fft_mag2))
+            self.fft_mag = scipy.ndimage.gaussian_filter(fft_mag, sigma=(smoothing, smoothing), order=0)
+            self.fft_item.setImage(np.log2(1+self.fft_mag))
             self.fft_view.setAspectLocked(True)
 
             tr = QtGui.QTransform()  # prepare ImageItem transformation:
@@ -219,7 +315,10 @@ class ImageDialog(QtWidgets.QWidget):
         self.parent.main = self.key
         self.parent.set_dataset()
         self.dataset = self.parent.dataset
+        
         self.parent.plotUpdate()
+        self.update_fft()
+        
        
     def sum_stack(self, value=0):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
@@ -228,7 +327,7 @@ class ImageDialog(QtWidgets.QWidget):
             name = f'Sum-{self.parent.dataset.title.split('-')[0]}'
             dataset = self.parent.dataset.sum(axis=dims[0])
             dataset.metadata = self.parent.dataset.metadata.copy()
-            self.parent.metadata['plot']['additional_features'] = {}
+            self.parent.dataset.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE')
             
     def average_stack(self, value=0):
@@ -245,9 +344,17 @@ class ImageDialog(QtWidgets.QWidget):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
             key =f'RigidReg-{self.parent.main.split("-")[-1]}'
             name = f'RigidReg-{self.parent.dataset.title.split("-")[-1]}'
-            dataset = image_tools.rigid_registration(self.parent.dataset)
+            x = self.parent.dataset.get_image_dims(return_axis=True)[0]
+            
+            if abs(x[1]-x[0]) > 0.01:
+                do_sub_pixel = False
+            else:
+                do_sub_pixel = True
+            
+            dataset = image_tools.rigid_registration(self.parent.dataset,
+                                                     sub_pixel=do_sub_pixel)
             dataset.metadata.update(self.parent.dataset.metadata)
-            self.parent.metadata['plot']['additional_features'] = {}
+            self.parent.dataset.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.rigid_regButton.setChecked(False)
 
@@ -256,8 +363,9 @@ class ImageDialog(QtWidgets.QWidget):
             key =f'DemonReg-{self.parent.main.split("-")[-1]}'
             name = f'DemonReg-{self.parent.dataset.title.split("-")[-1]}'
             dataset = image_tools.demon_registration(self.parent.dataset)
+
             dataset.metadata.update(self.parent.dataset.metadata)
-            self.parent.metadata['plot']['additional_features'] = {}
+            self.parent.dataset.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.demon_regButton.setChecked(False)
         
@@ -283,27 +391,30 @@ class ImageDialog(QtWidgets.QWidget):
         print(LR_dataset, LR_dataset.min(), LR_dataset.max()) 
         key =f'LRdeconvol-{self.parent.main.split("-")[-1]}'
         name = f'LRdeconvol-{self.dataset.title.split("-")[-1]}'
-        self.parent.metadata['plot']['additional_features'] = {}
+        self.parent.dataset.metadata['plot']['additional_features'] = {}
         
         self.parent.add_image_dataset(key, name, LR_dataset, data_type='IMAGE')
         
         self.deconButton.setChecked(False)
             
-    def find_atoms(self,  value=0):
-        atom_size = float(self.resolution_edit.displayText())
-        if hasattr(self.parent.dataset, 'x'):
-            scale = self.parent.dataset.x[1]-self.parent.dataset.x[0]
-        else:
-            scale = 1.
-        atoms = pyTEMlib.atom_tools.find_atoms(self.parent.dataset, atom_size=atom_size/scale, threshold=0.)   
-        if 'atoms' not in self.parent.dataset.metadata.keys():
-            self.parent.dataset.metadata['atoms'] = {}     
-        self.parent.dataset.metadata['atoms']['positions'] = atoms
-        self.parent.dataset.metadata['atoms']['size'] = atom_size
-        self.parent.dataset.metadata['plot']['additional_features'] = 'Image'
-        self.parent.plotUpdate()
-        self.atomsButton.setChecked(False)
-        
+    def svd_clean(self,  value=0):
+        if self.parent.dataset.data_type.name == 'IMAGE':
+            
+            atom_size = float(self.resolution_edit.displayText())
+            if hasattr(self.parent.dataset, 'x'):
+                scale = self.parent.dataset.x[1]-self.parent.dataset.x[0]
+            else:
+                scale = 1.
+            cleaned_image = pyTEMlib.image_tools.clean_svd(self.parent.dataset, atom_size=atom_size/scale, threshold=0.)   
+            key =f"clean-{self.parent.main.split('-')[-1]}"
+            name = f"clean-{self.dataset.title.split('-')[-1]}"
+            self.parent.dataset.metadata['plot']['additional_features'] = {}
+            self.parent.add_image_dataset(key, name, cleaned_image, data_type='IMAGE')
+            self.parent.plotUpdate()
+            
+        self.svdButton.setChecked(False)
+    
+    
     def get_additional_features(self):
         if 'plot' not in self.parent.dataset.metadata.keys():
             self.parent.dataset.metadata['plot'] = {}
@@ -319,4 +430,32 @@ class ImageDialog(QtWidgets.QWidget):
             plot_features["atoms"] = pos
         return plot_features   
 
+def diffractogram_spots(dset, FOV_x, FOV_y, spot_threshold=0.1):
+    
+    data = np.array(np.log(1+np.abs(dset)))
+    data = data - data.min()
+    data = data/data.max()
+
+    # some images are strange and blob_log does not work on the power spectrum
+    try:
+        spots_random = skimage.feature.blob_log(data, max_sigma=5, threshold=spot_threshold)
+    except ValueError:
+        spots_random = skimage.feature.peak_local_max(np.array(data.T), min_distance=3, threshold_rel=spot_threshold)
+        spots_random = np.hstack(spots_random, np.zeros((spots_random.shape[0], 1)))
+        
+    print(f'Found {spots_random.shape[0]} reflections')
+    
+    # Needed for conversion from pixel to Reciprocal space
+    rec_scale = np.array([1/FOV_x, 1/FOV_y])
+    
+    spots_random[:, :2] = (spots_random[:, :2]-[data.shape[0]/2, data.shape[1]/2])
+    # sort reflections
+    spots_random[:, 2] = np.linalg.norm(spots_random[:, 0:2], axis=1)
+    spots_index = np.argsort(spots_random[:, 2])
+    
+    spots = spots_random[spots_index]
+    # third row is angles
+    spots[:, 2] = np.arctan2(spots[:, 0], spots[:, 1])
+    spots[:, :2] += [data.shape[0]/2, data.shape[1]/2]
+    return spots[:, :2]
    

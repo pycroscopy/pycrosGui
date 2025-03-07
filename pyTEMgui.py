@@ -13,23 +13,20 @@
 #
 #################################################################
 from PyQt5 import QtCore
-from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 
 import PyQt5
 import sys
 sys.path.insert(0, '../pyTEMlib/')
+import pyTEMlib
 
-import os as os
 import numpy as np
-import scipy as scipy
 
 import pyqtgraph as pg
 
 # =============================================================
 #   Include pycroscopy Libraries                                      #
 # =============================================================
-import sidpy
 
 # =============================================================
 #   Include pycroscopy Dialogs                                      #
