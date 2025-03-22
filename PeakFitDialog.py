@@ -34,7 +34,8 @@ class PeakFitDialog(QtWidgets.QWidget):
     
         self.parent = parent
         layout = self.get_sidbar()
-        self.setLayout(layout)    
+        self.setLayout(layout)  
+        self.name =  "PeakFit"
         self.setWindowTitle("Peak Fit")
         self.peak_key = ''
         self.parent = parent

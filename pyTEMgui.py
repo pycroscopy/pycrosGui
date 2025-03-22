@@ -38,7 +38,8 @@ from LowLossDialog import LowLossDialog
 from CoreLossDialog import CoreLossDialog
 from PeakFitDialog import PeakFitDialog
 from ImageDialog import ImageDialog
-
+from AtomDialog import AtomDialog
+from AcquisitionDialog import AcquDialog
 # =======================================================================================================
 #                                      Main Window Module                                               #
 # =======================================================================================================
@@ -47,54 +48,60 @@ class MainWidget(BaseWidget):
     def __init__(self, filename=None):
         super().__init__(filename=filename)
         
-        # add dialogs with additional capabilities 
-        self.InfoWidget = PyQt5.QtWidgets.QDockWidget("Info ", self)
+         # add dialogs with additional capabilities 
+                                                                    
         self.InfoDialog = InfoDialog(self)
-        self.InfoWidget.setFeatures(PyQt5.QtWidgets.QDockWidget.DockWidgetMovable |
-                              PyQt5.QtWidgets.QDockWidget.DockWidgetFloatable)
-        self.InfoWidget.setWidget(self.InfoDialog)# Add the dock to the main window
-        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.InfoWidget)
+                                                                                   
+                                                                              
+        self.InfoWidget = self.add_sidebar(self.InfoDialog)
+                                                                          
         self.tabifyDockWidget(self.DataWidget, self.InfoWidget) 
         self.InfoWidget.visibilityChanged.connect(self.InfoDialog.updateInfo)
-
-        self.LowLossWidget = PyQt5.QtWidgets.QDockWidget("Low Loss ", self)
+        
+                                                                           
         self.LowLossDialog = LowLossDialog(self)
-        self.LowLossWidget.setFeatures(PyQt5.QtWidgets.QDockWidget.DockWidgetMovable |
-                              PyQt5.QtWidgets.QDockWidget.DockWidgetFloatable)
-        self.LowLossWidget.setWidget(self.LowLossDialog)# Add the dock to the main window
+                                                                                      
+                                                                              
+        self.LowLossWidget = self.add_sidebar(self.LowLossDialog)# Add the dock to the main window
 
-        self.CoreLossWidget = PyQt5.QtWidgets.QDockWidget("Core Loss ", self)
+                                                                             
         self.CoreLossDialog = CoreLossDialog(self)
-        self.CoreLossWidget.setFeatures(PyQt5.QtWidgets.QDockWidget.DockWidgetMovable |
-                              PyQt5.QtWidgets.QDockWidget.DockWidgetFloatable)
-        self.CoreLossWidget.setWidget(self.CoreLossDialog)# Add the dock to the main window
+                                                                                       
+                                                                              
+        self.CoreLossWidget = self.add_sidebar(self.CoreLossDialog)# Add the dock to the main window
         
-        self.PeakFitWidget = PyQt5.QtWidgets.QDockWidget("Peak Fit", self)
+                                                                          
         self.PeakFitDialog = PeakFitDialog(self)
-        self.PeakFitWidget.setFeatures(PyQt5.QtWidgets.QDockWidget.DockWidgetMovable |
-                              PyQt5.QtWidgets.QDockWidget.DockWidgetFloatable)
-        self.PeakFitWidget.setWidget(self.PeakFitDialog)# Add the dock to the main window
+                                                                                      
+                                                                              
+        self.PeakFitWidget = self.add_sidebar(self.PeakFitDialog)# Add the dock to the main window
 
-        self.ImageWidget = PyQt5.QtWidgets.QDockWidget("Image", self)
+                                                                     
         self.ImageDialog = ImageDialog(self)
-        self.ImageWidget.setFeatures(PyQt5.QtWidgets.QDockWidget.DockWidgetMovable |
-                              PyQt5.QtWidgets.QDockWidget.DockWidgetFloatable)
-        self.ImageWidget.setWidget(self.ImageDialog)# Add the dock to the main window
+                                                                                    
+                                                                              
+        self.ImageWidget = self.add_sidebar(self.ImageDialog)# Add the dock to the main window
         
-        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.LowLossWidget)
-        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.CoreLossWidget)
-        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.PeakFitWidget)
-        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, self.ImageWidget)
+        self.AtomDialog = AtomDialog(self)
+        self.AtomWidget = self.add_sidebar(self.AtomDialog)
+        
+        self.AcquDialog = AcquDialog(self)
+        self.AcquWidget = self.add_sidebar(self.AcquDialog)
+                                                                             
+                                                                           
         
         self.tabifyDockWidget(self.InfoWidget, self.LowLossWidget)
         self.tabifyDockWidget(self.LowLossWidget, self.CoreLossWidget)
         self.tabifyDockWidget(self.CoreLossWidget, self.PeakFitWidget)
         self.tabifyDockWidget(self.PeakFitWidget, self.ImageWidget)
+        self.tabifyDockWidget(self.ImageWidget, self.AtomWidget)
+        self.tabifyDockWidget( self.AtomWidget, self.AcquWidget)
         
         self.LowLossWidget.visibilityChanged.connect(self.low_loss_update)
         self.CoreLossWidget.visibilityChanged.connect(self.core_loss_update)
         self.PeakFitWidget.visibilityChanged.connect(self.peak_fit_update)
         self.ImageWidget.visibilityChanged.connect(self.image_update)
+        self.AtomWidget.visibilityChanged.connect(self.atom_update)
         
         self.DataWidget.raise_()
 
@@ -170,6 +177,9 @@ class MainWidget(BaseWidget):
         if visible:
             self.ImageDialog.update_sidebar()
 
+    def atom_update(self, visible):
+        if visible:
+            self.AtomDialog.update_sidebar()
 
 
 def main(args=[]):

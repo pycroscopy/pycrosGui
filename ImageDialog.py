@@ -6,6 +6,8 @@
 # ImageDialog: SImage processing dialog.
 #       
 #       
+# Author: Gerd Duscher, UTK
+# started 02/2025       
 ####################################################################
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
@@ -30,7 +32,8 @@ class ImageDialog(QtWidgets.QWidget):
         self.set_energy = True
         layout = self.get_sidbar()
         self.atoms = None
-        self.setLayout(layout)    
+        self.setLayout(layout)   
+        self.name = 'Image'
         self.setWindowTitle("Image")
 
     def get_sidbar(self): 
@@ -147,7 +150,7 @@ class ImageDialog(QtWidgets.QWidget):
         self.fft_view.addItem(self.fft_resolution)
         
         pos = np.array([[0,0]])
-        self.blobs = pg.ScatterPlotItem(pos=pos, pen=(255,0,0) , symbol='o', size=10, brush=pg.mkBrush(200,0,0), name='bragg')
+        self.blobs = pg.ScatterPlotItem(pos=pos, pen=(255,0,0) , symbol='o', size=10, brush=pg.mkBrush(200,0,0,50), name='bragg')
         #self.blobs.setZValue(100)
         self.blobs.setVisible(True)
         self.low_pass= pg.ScatterPlotItem(pos=pos,  symbol='o', size=5, pen=(0,0, 255), brush=pg.mkBrush(0,0,200, 50), name='low_loss')
@@ -192,7 +195,7 @@ class ImageDialog(QtWidgets.QWidget):
         radius = self.fft_resolution.size()[0]/2
         self.fft_resolution.sigRegionChangeFinished.disconnect()
         self.fft_resolution.setPos(pos=[-radius, -radius], update=True)
-        self.resolution_edit.setText(f'{1/radius:.2f}')
+        self.resolution_edit.setText(f'{1/radius:.3f}')
         self.resolution_unit.setText(self.parent.dataset.x.units)
         self.fft_resolution.sigRegionChangeFinished.connect(self.fft_changed)
     
@@ -206,13 +209,10 @@ class ImageDialog(QtWidgets.QWidget):
             FOV_x = self.parent.dataset.x[-1]
             FOV_y = self.parent.dataset.y[-1]
             self.low_pass.setSize(low_pass*FOV_x)
-            
             spots = diffractogram_spots(self.fft_mag, FOV_x, FOV_y, spot_threshold=spot_threshold)
             
-            #
             for i in range(len(spots)):
                 posP =  self.fft_item.mapToParent(spots[i, 0], spots[i, 1])
-                print(posP, spots[i])
                 spots[i] = np.array([posP.x(), posP.y()])
             spots = spots[np.linalg.norm(spots[:,:2],axis=1)<20, :]
             spots = spots[np.linalg.norm(spots[:,:2],axis=1)>0.5, :]
@@ -247,10 +247,8 @@ class ImageDialog(QtWidgets.QWidget):
             self.parent.add_image_dataset(key, name, filtered_dataset, data_type='IMAGE')
             self.blobs.setVisible(False)
             self.low_pass.setVisible(False)
+            self.parent.status.showMessage('Finished adaptive Fourier filter')
         
-        
-    
-
     def set_resolution(self):
         resolution = 1/float(self.resolution_edit.displayText())
         self.fft_resolution.setSize([resolution*2, resolution*2])
@@ -357,9 +355,11 @@ class ImageDialog(QtWidgets.QWidget):
             self.parent.dataset.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.rigid_regButton.setChecked(False)
+            self.parent.status.showMessage('Rigid Registration finished')
 
     def demon_registration(self,  value=0):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
+            self.parent.status.showMessage('Demon Registration started')
             key =f'DemonReg-{self.parent.main.split("-")[-1]}'
             name = f'DemonReg-{self.parent.dataset.title.split("-")[-1]}'
             dataset = image_tools.demon_registration(self.parent.dataset)
@@ -368,14 +368,15 @@ class ImageDialog(QtWidgets.QWidget):
             self.parent.dataset.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.demon_regButton.setChecked(False)
+            self.parent.status.showMessage('Demon Registration finished')
         
     def decon_lr(self):
         if self.parent.dataset.data_type.name != 'IMAGE':
             return
         if 'probe' not in self.parent.dataset.metadata.keys():
-            atom_size = float(self.resolution_edit.displayText())*2
+            atom_size = float(self.resolution_edit.displayText())
             if hasattr(self.parent.dataset, 'x'):
-                scale = self.parent.dataset.x[1]-self.parent.dataset.x[0]
+                scale = self.parent.dataset.x.slope
             else:
                 scale = 1.
             gauss_diameter = atom_size/scale
@@ -388,15 +389,21 @@ class ImageDialog(QtWidgets.QWidget):
       
         print('Deconvolution of ', self.parent.dataset.title)
         LR_dataset = image_tools.decon_lr(self.parent.dataset, probe, verbose=False)
-        print(LR_dataset, LR_dataset.min(), LR_dataset.max()) 
         key =f'LRdeconvol-{self.parent.main.split("-")[-1]}'
         name = f'LRdeconvol-{self.dataset.title.split("-")[-1]}'
+        iterations = 0
+        if 'Deconvolution' in LR_dataset.metadata:
+            if 'Lucy-Richardson' in LR_dataset.metadata['Deconvolution']:
+                iterations = LR_dataset.metadata['Deconvolution']['Lucy-Richardson']['iterations']
         self.parent.dataset.metadata['plot']['additional_features'] = {}
         
         self.parent.add_image_dataset(key, name, LR_dataset, data_type='IMAGE')
         
         self.deconButton.setChecked(False)
-            
+        if iterations >0:
+            self.parent.status.showMessage(f'Lucy-Richardson deconvolution converged in {iterations} iterations')
+        else:
+            self.parent.status.showMessage('Lucy-Richardson deconvolution finished')
     def svd_clean(self,  value=0):
         if self.parent.dataset.data_type.name == 'IMAGE':
             
@@ -405,7 +412,7 @@ class ImageDialog(QtWidgets.QWidget):
                 scale = self.parent.dataset.x[1]-self.parent.dataset.x[0]
             else:
                 scale = 1.
-            cleaned_image = pyTEMlib.image_tools.clean_svd(self.parent.dataset, atom_size=atom_size/scale, threshold=0.)   
+            cleaned_image = pyTEMlib.image_tools.clean_svd(self.parent.dataset, pixel_size=scale)   
             key =f"clean-{self.parent.main.split('-')[-1]}"
             name = f"clean-{self.dataset.title.split('-')[-1]}"
             self.parent.dataset.metadata['plot']['additional_features'] = {}

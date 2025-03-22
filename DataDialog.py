@@ -18,14 +18,8 @@
 #           ** changed to reflect Libra and pA ** Nov 2012
 #       
 #####################################################################
-from PyQt5 import QtCore
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
-
-
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
 
 import os as os
 import numpy as np
@@ -38,7 +32,8 @@ class DataDialog(QtWidgets.QWidget):
         
         layout = self.get_sidbar()
         self.setLayout(layout)    
-        self.setWindowTitle("Datasets")
+        self.name = 'Data'
+        self.setWindowTitle(self.name)
 
     def get_sidbar(self): 
         layout = QtWidgets.QGridLayout()

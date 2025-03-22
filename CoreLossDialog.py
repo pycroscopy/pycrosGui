@@ -46,7 +46,7 @@ class CoreLossDialog(QtWidgets.QWidget):
         self.cl_key = ''
         self.parent = parent
         self.dataset = parent.dataset
-        
+        self.name = 'CoreLoss'
         self.model = []
         self.edges = {}
         self.count = 0

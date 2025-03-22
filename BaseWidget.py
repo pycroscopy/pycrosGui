@@ -210,6 +210,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.DataWidget = QtWidgets.QDockWidget("Datasets ", self)
         self.DataDialog = DataDialog(self)
         self.DataWidget.setWidget(self.DataDialog)# Add the dock to the main window
+        self.DataWidget.visibilityChanged.connect(self.update_DataDialog)
         
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.DataWidget)
         
@@ -316,7 +317,17 @@ class BaseWidget(QtWidgets.QMainWindow):
             tip='About pycrosGUI')
         
         self.add_actions(self.help_menu, (about_action,))
-
+    
+    def add_sidebar(self, dialog):
+        dialogWidget = QtWidgets.QDockWidget(dialog.name, self)
+        
+        dialogWidget.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
+                                 QtWidgets.QDockWidget.DockWidgetFloatable)
+        dialogWidget.setWidget(dialog)# Add the dock to the main window
+        self.addDockWidget (QtCore.Qt.LeftDockWidgetArea, dialogWidget)
+        
+        return dialogWidget
+        
     def imageHoverEvent(self, event):
         """Show the position, pixel, and value under the mouse cursor.
         """
@@ -394,7 +405,7 @@ class BaseWidget(QtWidgets.QMainWindow):
             y = int(y+0.5)
         else: 
             return
-        modifiers = QtGui.QApplication.keyboardModifiers()
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
         if modifiers == QtCore.Qt.ShiftModifier:
             self.add_si_spectrum.append([x, y])
         elif modifiers == QtCore.Qt.ControlModifier:
@@ -513,7 +524,9 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.set_dataset()
         if '_relationship' not in self.datasets:
             self.datasets['_relationship'] = {}
-        
+        self.update_DataDialog()
+            
+    def update_DataDialog(self):
         for key in self.datasets.keys():
             if isinstance(self.datasets[key], sidpy.Dataset):
                 if 'SPECT' in self.datasets[key].data_type.name:

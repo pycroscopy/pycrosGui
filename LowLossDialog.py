@@ -34,7 +34,8 @@ class LowLossDialog(QWidget):
     
         self.parent = parent
         layout = self.get_sidbar()
-        self.setLayout(layout)    
+        self.setLayout(layout)   
+        self.name = "LowLoss"        
         self.setWindowTitle("LowLoss")
         self.ll_key = ''
 
@@ -155,6 +156,7 @@ class LowLossDialog(QWidget):
         self.do_allButton.setText("Do All")
         self.do_allButton.setCheckable(True)
         layout.addWidget(self.do_allButton,  row, 2)
+        self.do_allButton.clicked.connect(self.do_all)
         
         row += 1
         self.multipleButton = QPushButton()
@@ -436,7 +438,15 @@ class LowLossDialog(QWidget):
     def do_all(self, value=0):
         if len(self.parent.dataset.shape) < 3:
             return
-            
+        for i in range(self.parent.dataset.shape[0]):
+            print(i, self.parent.dataset.shape[0])
+            for j in range(self.parent.dataset.shape[1]):
+                self.parent.x = i
+                self.parent.y = j
+                # self.get_resolution_function()
+                self.get_drude()
+                # self.get_multiple_scattering()
+        """          
         zero_loss_fit_width=self.low_loss_tab[2, 0].value
         fit_start = self.low_loss_tab[5, 0].value
         fit_end = self.low_loss_tab[6, 0].value
@@ -458,7 +468,7 @@ class LowLossDialog(QWidget):
         self.parent.status.showMessage('Fitted zero-loss + plasmon peak')
 
         
-        """
+        " ""
         anglog, _, _ = eels_tools.angle_correction(self.parent.spectrum)
         i = 0
         for x in range(self.parent.dataset.shape[0]):   

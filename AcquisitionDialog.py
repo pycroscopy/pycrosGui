@@ -1,207 +1,227 @@
 #####################################################################
 #
-# Part of Quantifit
+# Part of pycrosGui
 #
-# SpecInfoDialog: Spectrum information dialog.
-#       - Name
-#       - Disperison
-#       - Offset
-#       - Exposure Time
-#       - Acceleration Voltage
-#       - Collection Angle
-#       - Convergence Angle
-#       - Binning
-#       - Conversion Factor for CCD
-#       - Flux of incident beam in #e- per second
-#       - VOA: current of a secondary measure of beam current in nA
-#           (here virtual objective aperture)
-#           ** changed to reflect Libra and pA ** Nov 2012
+# AcquistionDialog: Acquisition directly from Microcope.
 #       
 #####################################################################
 from PyQt5 import QtGui
 from PyQt5 import QtWidgets
+
 
 import numpy as np
 import sidpy
 import scipy
 
 from pyTEMlib import eels_tools
+import sys
+sys.path.insert(0,'/lustre/isaac24/proj/UTK0286/STEM_TF/Autoscript/autoscript_code_lib/')
+# from autoscript_tem_microscope_client import TemMicroscopeClient
+# from DTMicroscope.base.stem import DTSTEM
 
-
-class InfoDialog(QtWidgets.QWidget):
+class AcquDialog(QtWidgets.QWidget):
     def __init__(self, parent=None):
-        super(InfoDialog, self).__init__(parent)
+        super(AcquDialog, self).__init__(parent)
     
         self.parent = parent
         self.set_energy = True
         layout = self.get_sidbar()
         self.setLayout(layout)    
-        self.name = 'Info'
+        self.name = 'Acquisition'
         self.setWindowTitle(self.name)
+        
+        self.number = 0
 
     def get_sidbar(self): 
         validfloat = QtGui.QDoubleValidator()
+        validint = QtGui.QIntValidator()
         
         layout = QtWidgets.QGridLayout()
         row = 0 
         self.mainList = QtWidgets.QComboBox(self)
-        self.mainList.addItem("None")
+        self.mainList.addItem(".")
         layout.addWidget(self.mainList,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)  
 
         self.mainList.activated[str].connect(self.set_dataset)
         
         row += 1
-        self.scaleButton = QtWidgets.QPushButton()
-        self.scaleButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
-        self.scaleButton.setText("Scale")
-        layout.addWidget(self.scaleButton,  row,0, 1, 3)
+        self.connectButton = QtWidgets.QPushButton()
+        self.connectButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
+        self.connectButton.setText("Connect to Microsopcope")
+        layout.addWidget(self.connectButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
-        self.scaleButton.clicked.connect(self.cursor2energy_scale)
+        self.connectButton.clicked.connect(self.connect)
         
         row += 1
-        self.offsetLabel = QtWidgets.QLabel("Offset")
-        self.offsetEdit = QtWidgets.QLineEdit(" 100.0")
-        self.offsetEdit.setValidator(validfloat)
-        self.offsetEdit.editingFinished.connect(self.set_scale)
-        self.offsetUnit = QtWidgets.QLabel("eV")
-        layout.addWidget(self.offsetLabel,row,0)
-        layout.addWidget(self.offsetEdit,row,1)
-        layout.addWidget(self.offsetUnit,row,2)
+        self.ipLabel = QtWidgets.QLabel("IP Address")
+        self.ipEdit = QtWidgets.QLineEdit("11.11.000.123")
+        layout.addWidget(self.ipLabel,row,0)
+        layout.addWidget(self.ipEdit,row,1)
         
         row += 1
-        self.dispersionLabel = QtWidgets.QLabel("Dispersion")
-        self.dispersionEdit = QtWidgets.QLineEdit(" 100.0")
-        self.dispersionEdit.setValidator(validfloat)
-        self.dispersionEdit.editingFinished.connect(self.set_scale)
-        self.dispersionUnit = QtWidgets.QLabel("eV")
-        layout.addWidget(self.dispersionLabel,row,0)
-        layout.addWidget(self.dispersionEdit,row,1)
-        layout.addWidget(self.dispersionUnit,row,2)
+        self.portLabel = QtWidgets.QLabel("Port")
+        self.portEdit = QtWidgets.QLineEdit("9095")
+        layout.addWidget(self.portLabel,row,0)
+        layout.addWidget(self.portEdit,row,1)
+        
+        row += 1
+        self.microscopeLabel = QtWidgets.QLabel("Connected to")
+        self.microscopeEdit = QtWidgets.QLineEdit("None")
+        layout.addWidget(self.microscopeLabel,row,0)
+        layout.addWidget(self.microscopeEdit,row,1)
         
         row += 1
         self.experimentButton = QtWidgets.QPushButton()
         self.experimentButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
-        self.experimentButton.setText("Experimental Conditions")
-        self.experimentButton.clicked.connect(self.parent.show_metadata)
+        self.experimentButton.setText("Acquisition")
+        self.experimentButton.clicked.connect(self.acquire)
         layout.addWidget(self.experimentButton,  row,0, 1, 3)
-        layout.setColumnStretch(0, 3)        
+        layout.setColumnStretch(0, 3)      
+        
+        row += 1
+        self.nFramesLabel = QtWidgets.QLabel("Series")
+        self.nFramesEdit = QtWidgets.QLineEdit("1")
+        self.nFramesEdit.setValidator(validint)
+        self.nFramesEdit.editingFinished.connect(self.OnExposeEnter)
+        self.nFramesUnit = QtWidgets.QLabel("frames")
+        layout.addWidget(self.nFramesLabel,row,0)
+        layout.addWidget(self.nFramesEdit,row,1)
+        layout.addWidget(self.nFramesUnit,row,2)
         
         row += 1
         self.timeLabel = QtWidgets.QLabel("Exp. Time")
-        self.timeEdit = QtWidgets.QLineEdit(" 100.0")
-        self.timeEdit.setValidator(validfloat)
+        self.timeEdit = QtWidgets.QLineEdit(" 4")
+        
+        self.timeEdit.setValidator(validint)
         self.timeEdit.editingFinished.connect(self.OnExposeEnter)
-        self.timeUnit = QtWidgets.QLabel("ms")
+        self.timeUnit = QtWidgets.QLabel("μs")
         layout.addWidget(self.timeLabel,row,0)
         layout.addWidget(self.timeEdit,row,1)
         layout.addWidget(self.timeUnit,row,2)
 
         row += 1
-        self.convLabel = QtWidgets.QLabel("Conv. Angle")
-        self.convEdit = QtWidgets.QLineEdit(" 100.0")
+        self.convLabel = QtWidgets.QLabel("Size")
+        self.convEdit = QtWidgets.QLineEdit(" 512")
         self.convEdit.setValidator(validfloat)
         self.convEdit.editingFinished.connect(self.OnConvEnter)
-        self.convUnit = QtWidgets.QLabel("mrad")
+        self.convUnit = QtWidgets.QLabel("pixels")
         layout.addWidget(self.convLabel,row,0)
         layout.addWidget(self.convEdit,row,1)
         layout.addWidget(self.convUnit,row,2)
 
         row += 1
-        self.collLabel = QtWidgets.QLabel("Coll. Angle")
+        self.fovLabel = QtWidgets.QLabel("FOV")
+        self.fovEdit = QtWidgets.QLineEdit(" 10.0")
+        self.fovEdit.setValidator(validfloat)
+        self.fovUnit = QtWidgets.QLabel("nm")
+        layout.addWidget(self.fovLabel,row,0)
+        layout.addWidget(self.fovEdit,row,1)
+        layout.addWidget(self.fovUnit,row,2)
+        
+        row += 1
+        self.collLabel = QtWidgets.QLabel("Current")
         self.collEdit = QtWidgets.QLineEdit(" 10.0")
         self.collEdit.setValidator(validfloat)
         self.collEdit.editingFinished.connect(self.OnCollEnter)
-        self.collUnit = QtWidgets.QLabel("mrad")
+        self.collUnit = QtWidgets.QLabel("pA")
         layout.addWidget(self.collLabel,row,0)
         layout.addWidget(self.collEdit,row,1)
         layout.addWidget(self.collUnit,row,2)
 
-        row += 1
-        self.E0Label = QtWidgets.QLabel("Acc. Voltage")
-        self.E0Edit = QtWidgets.QLineEdit(" 100.0")
-        self.E0Edit.setValidator(validfloat)
-        self.E0Edit.editingFinished.connect(self.OnE0Enter)
-        self.E0Unit = QtWidgets.QLabel("kV")
-        layout.addWidget(self.E0Label,row,0)
-        layout.addWidget(self.E0Edit,row,1)
-        layout.addWidget(self.E0Unit,row,2)
 
         row += 1
         self.quantifyButton = QtWidgets.QPushButton()
         self.quantifyButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
-        self.quantifyButton.setText("Quantification")
-        
-        self.quantifyButton.setCheckable(True)
-        self.quantifyButton.clicked.connect(self.set_intensity_scale)
+        self.quantifyButton.setText("Detector")
         layout.addWidget(self.quantifyButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)        
         
         row += 1 
         self.referenceList = QtWidgets.QComboBox(self)
-        self.referenceList.addItem("None")
+        self.referenceList.addItem("HAADF")
         layout.addWidget(self.referenceList,  row,0, 1, 3)
         layout.setColumnStretch(0, 3)  
         self.referenceList.activated[str].connect(self.set_flux)
         
         row += 1
         self.get_shiftButton = QtWidgets.QPushButton()
-        self.get_shiftButton.setText("Get Shift")
+        self.get_shiftButton.setText("C1/A1")
         self.get_shiftButton.setCheckable(True)
         layout.addWidget(self.get_shiftButton,  row, 0)
         self.get_shiftButton.clicked.connect(self.get_shift)
 
         self.set_shiftButton = QtWidgets.QPushButton()
-        self.set_shiftButton.setText("Shift Spectrum")
+        self.set_shiftButton.setText(" Auto Gain")
         self.set_shiftButton.setCheckable(True)
         layout.addWidget(self.set_shiftButton,  row, 2)
         self.set_shiftButton.setDisabled(True)
         self.set_shiftButton.clicked.connect(self.shift_spectrum)
 
         row += 1
-        self.flux_ppmLabel = QtWidgets.QLabel("Relative Flux")
+        self.flux_ppmLabel = QtWidgets.QLabel("Gain")
         self.flux_ppmEdit = QtWidgets.QLineEdit(" 1")
         self.flux_ppmEdit.setValidator(validfloat)
         self.flux_ppmEdit.editingFinished.connect(self.OnFlux_ppmEnter)
-        self.flux_ppmUnit = QtWidgets.QLabel("ppm")
+        self.flux_ppmUnit = QtWidgets.QLabel("%")
         layout.addWidget(self.flux_ppmLabel,row,0)
         layout.addWidget(self.flux_ppmEdit,row,1)
         layout.addWidget(self.flux_ppmUnit,row,2)
 
-        row += 1
-        self.conversionLabel = QtWidgets.QLabel("Conversion")
-        self.conversionEdit = QtWidgets.QLineEdit(" 25.0")
-        self.conversionEdit.setValidator(validfloat)
-        self.conversionEdit.editingFinished.connect(self.OnConversionEnter)
-        self.conversionUnit = QtWidgets.QLabel("e<sup>-</sup>/counts")
-        layout.addWidget(self.conversionLabel,row,0)
-        layout.addWidget(self.conversionEdit,row,1)
-        layout.addWidget(self.conversionUnit,row,2)
-        row += 1
-        self.fluxLabel = QtWidgets.QLabel("Flux")
-        self.fluxEdit = QtWidgets.QLineEdit(" 100.0")
-        self.fluxEdit.setValidator(validfloat)
-        self.fluxEdit.editingFinished.connect(self.OnFluxEnter)
-        self.fluxUnit = QtWidgets.QLabel("e<sup>-</sup>/s")
-        layout.addWidget(self.fluxLabel,row,0)
-        layout.addWidget(self.fluxEdit,row,1)
-        layout.addWidget(self.fluxUnit,row,2)
-        row += 1
-        self.VOALabel = QtWidgets.QLabel("Measurement")
-        self.VOAEdit = QtWidgets.QLineEdit(" 10.0")
-        self.VOAEdit.setValidator(validfloat)
-        self.VOAEdit.editingFinished.connect(self.OnVOAEnter)
-        self.VOAUnit = QtWidgets.QLabel("pA")
-        layout.addWidget(self.VOALabel,row,0)
-        layout.addWidget(self.VOAEdit,row,1)
-        layout.addWidget(self.VOAUnit,row,2)
+        
         
         return layout
+    
+    def connect(self):
+        self.microscope = DTSTEM(data_mode = 'simulation') # choice of 'simulation' or 'preloaded'
+        ip = self.ipEdit.displayText()
+        port = int(self.portEdit.displayText())
+        self.microscope.connect(ip, port=port)
+        self.microscopeEdit.setText('Digital Twin')
         
+    def acquire(self):
+        fov  = float(self.fovEdit.displayText())
+        self.microscope.optics['fov'] = fov
+        image = self.microscope.get_scanned_image(size=512, dwell_time=1, detector='haadf', seed=42)
+        self.make_dataset(image)
+        
+        self.parent.datasets[f'Acquired_{self.number:03d}'] = self.dataset
+        
+        self.parent.dataset = self.dataset
+        self.parent.main = f'Acquired_{self.number:03d}'
+        self.number += 1
+        if '_relationship' not in self.parent.datasets:
+            self.parent.datasets['_relationship'] = {}
+        self.parent.update_DataDialog()
+        
+        
+        self.parent.add_image_dataset(f'Acquired_{self.number:03d}', 'HAADF', self.dataset, data_type='IMAGE')
+        
+        self.parent.dataset.metadata['plot']= {'additional_features': {}}
+        self.experimentButton.setChecked(False)
+        self.parent.status.showMessage('Acquired Image')
+        
+    def make_dataset(self, image):
+        
+        dataset = sidpy.Dataset.from_array(image)
+        dataset.data_type = 'Image'
+        dataset.title = 'HAADF'
+        fov  = float(self.fovEdit.displayText())
+        dataset.set_dimension(0, sidpy.Dimension(np.arange(dataset.shape[0])*fov/dataset.shape[0], 
+                                          name='x', units='nm', quantity='Length',
+                                          dimension_type='spatial'))
+        dataset.set_dimension(1, sidpy.Dimension(np.arange(dataset.shape[1])*fov/dataset.shape[1],
+                                          'y', units='nm', quantity='Length',
+                                          dimension_type='spatial'))
+        self.dataset = dataset
+        
+            
+    
     def set_dataset(self):
         item_text = self.mainList.currentText()
         self.parent.main = item_text.split(':')[0]
-        self.updateInfo()
+        
+        
 
     def set_flux(self, value=0):
         if self.referenceList.currentText() == 'None':
@@ -235,19 +255,16 @@ class InfoDialog(QtWidgets.QWidget):
             self.flux_ppmEdit.setText(f"{self.parent.datasets[self.parent.main].metadata['experiment']['flux_ppm']:.2f}")
         
     def update_sidebar(self):
-        self.updateInfo()
-    
+        # self.updateInfo()
+        pass
     def updateInfo(self):
         if '_relationship' not in self.parent.datasets:
             return
         spectrum_list = ['None']
-        reference_list = ['None']
         data_list = []
         
         self.key = self.info_key = self.parent.main
         self.parent.set_dataset()
-        spectrum_data = False
-        info_index= 0
         main_index = 0
         
         
@@ -261,10 +278,7 @@ class InfoDialog(QtWidgets.QWidget):
                 if key[0] != '_' :
                     data_list.append(f'{key}: {self.parent.datasets[key].title}')
                     if 'SPECTR' in self.parent.datasets[key].data_type.name:
-                        spectrum_data = True
                         spectrum_list.append(f'{key}: {self.parent.datasets[key].title}')
-                        if self.info_key == key:
-                            info_index = len(spectrum_list)-1
                     if key == reference_key:
                         reference_index = len(data_list)                  
                     if key == self.key:
@@ -313,9 +327,9 @@ class InfoDialog(QtWidgets.QWidget):
             else:
                 self.convEdit.setText('0')
             if 'collection_angle' in self.parent.dataset.metadata['experiment']:
-                col_angle = self.parent.dataset.metadata['experiment']['collection_angle'] #*1000
+                col_angle = self.parent.dataset.metadata['experiment']['collection_angle']*1000
                 if 'collection_angle_end' in self.parent.dataset.metadata['experiment']:
-                    col_angle_end = self.parent.dataset.metadata['experiment']['collection_angle_end'] # *1000
+                    col_angle_end = self.parent.dataset.metadata['experiment']['collection_angle_end']*1000
                     self.collEdit.setText(f"{col_angle:.1f}-{col_angle_end:.1f}")
                 else:
                     self.collEdit.setText(f"{col_angle:.1f}")
