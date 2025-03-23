@@ -32,14 +32,15 @@ import pyqtgraph as pg
 #   Include pycroscopy Dialogs                                      #
 # =============================================================
 
-from BaseWidget import BaseWidget
-from InfoDialog import InfoDialog
-from LowLossDialog import LowLossDialog
-from CoreLossDialog import CoreLossDialog
-from PeakFitDialog import PeakFitDialog
-from ImageDialog import ImageDialog
-from AtomDialog import AtomDialog
-from AcquisitionDialog import AcquDialog
+
+from pycrosGui.BaseWidget import BaseWidget
+from pyTEMGui.InfoDialog import InfoDialog
+from pyTEMGui.LowLossDialog import LowLossDialog
+from pyTEMGui.CoreLossDialog import CoreLossDialog
+from pyTEMGui.PeakFitDialog import PeakFitDialog
+from pyTEMGui.ImageDialog import ImageDialog
+from pyTEMGui.AtomDialog import AtomDialog
+from pyTEMGui.AcquisitionDialog import AcquDialog
 # =======================================================================================================
 #                                      Main Window Module                                               #
 # =======================================================================================================
@@ -48,38 +49,20 @@ class MainWidget(BaseWidget):
     def __init__(self, filename=None):
         super().__init__(filename=filename)
         
-         # add dialogs with additional capabilities 
-                                                                    
+        # ##### Add dialogs with additional capabilities                                                        
         self.InfoDialog = InfoDialog(self)
-                                                                                   
-                                                                              
         self.InfoWidget = self.add_sidebar(self.InfoDialog)
-                                                                          
-        self.tabifyDockWidget(self.DataWidget, self.InfoWidget) 
-        self.InfoWidget.visibilityChanged.connect(self.InfoDialog.updateInfo)
-        
                                                                            
         self.LowLossDialog = LowLossDialog(self)
-                                                                                      
-                                                                              
-        self.LowLossWidget = self.add_sidebar(self.LowLossDialog)# Add the dock to the main window
-
-                                                                             
+        self.LowLossWidget = self.add_sidebar(self.LowLossDialog)# Add the dock to the main window                                                                     
+        
         self.CoreLossDialog = CoreLossDialog(self)
-                                                                                       
-                                                                              
         self.CoreLossWidget = self.add_sidebar(self.CoreLossDialog)# Add the dock to the main window
         
-                                                                          
         self.PeakFitDialog = PeakFitDialog(self)
-                                                                                      
-                                                                              
         self.PeakFitWidget = self.add_sidebar(self.PeakFitDialog)# Add the dock to the main window
-
-                                                                     
+                                                             
         self.ImageDialog = ImageDialog(self)
-                                                                                    
-                                                                              
         self.ImageWidget = self.add_sidebar(self.ImageDialog)# Add the dock to the main window
         
         self.AtomDialog = AtomDialog(self)
@@ -88,8 +71,8 @@ class MainWidget(BaseWidget):
         self.AcquDialog = AcquDialog(self)
         self.AcquWidget = self.add_sidebar(self.AcquDialog)
                                                                              
-                                                                           
-        
+        # ##### Add the docks to the main window ######                                                                         
+        self.tabifyDockWidget(self.DataWidget, self.InfoWidget) 
         self.tabifyDockWidget(self.InfoWidget, self.LowLossWidget)
         self.tabifyDockWidget(self.LowLossWidget, self.CoreLossWidget)
         self.tabifyDockWidget(self.CoreLossWidget, self.PeakFitWidget)
@@ -97,6 +80,8 @@ class MainWidget(BaseWidget):
         self.tabifyDockWidget(self.ImageWidget, self.AtomWidget)
         self.tabifyDockWidget( self.AtomWidget, self.AcquWidget)
         
+        # ##### Connect the visibility of the docks to the update function ###### 
+        self.InfoWidget.visibilityChanged.connect(self.InfoDialog.updateInfo)
         self.LowLossWidget.visibilityChanged.connect(self.low_loss_update)
         self.CoreLossWidget.visibilityChanged.connect(self.core_loss_update)
         self.PeakFitWidget.visibilityChanged.connect(self.peak_fit_update)
@@ -160,7 +145,7 @@ class MainWidget(BaseWidget):
         for key, item in additional_features.items():
             plt.addItem(item)
 
-
+    # ##### Update functions for the dialogs ######
     def low_loss_update(self, visible):
         if visible:
             self.LowLossDialog.update_ll_sidebar()

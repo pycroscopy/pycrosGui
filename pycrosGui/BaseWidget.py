@@ -28,22 +28,20 @@ print('pyTEMlib version :', pyTEMlib.__version__)
 import pyTEMlib.file_tools
 import sidpy
 
-from DataDialog import DataDialog
+from .DataDialog import DataDialog
+from .periodic_table import PeriodicTable
 
 class ImageView(pg.ImageView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
-
-        self.ui.roiBtn.setChecked(True)
-        self.roiClicked()
+        self.ui.roiBtn.setChecked(False)
+        # self.roiClicked()
         
     def roiChanged(self):
         super().roiChanged()
         for i in range(len(self.roiCurves)):
             self.roiCurves[i].setPen('black')
         
-
     
 class BaseWidget(QtWidgets.QMainWindow):    
     def __init__(self, sidebar=[], filename=None):
@@ -99,7 +97,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         screen = QtWidgets.QDesktopWidget().screenGeometry()
         self.height = screen.height() 
         self.width = screen.width() 
-
+        self.periodic_table = PeriodicTable(self)
 	        
         ## Switch to using white background and black foreground
         pg.setConfigOption('background', 'w')
@@ -166,17 +164,20 @@ class BaseWidget(QtWidgets.QMainWindow):
 
         self.titleLabel =  QtWidgets.QLabel(" ") # pg.TextItem('', color='gray') ## , size='11pt', parent=self.plot3_view)
         
-
         self.image_item = ImageView()
         self.img = self.image_item.getImageItem()    
         self.img.hoverEvent = self.imageHoverEvent
+        self.img.mouseClickEvent = self.mouse_clicked_image
+
         view = self.image_item.getView()
         pos = np.array([[0,0]])
         self.blobs = pg.ScatterPlotItem(pos=pos, pen=None , symbol='o', size=10, brush=pg.mkBrush(200,0,0,50), name='atoms')
         self.blobs.setZValue(100)
         self.blobs.setVisible(False)
-        view = self.image_item.getView()
         view.addItem(self.blobs)
+
+        self.select_roi = pg.CircleROI(pos=[-.1, -.1], radius=0.1, pen=(0,9), parent=self.img)
+        self.select_roi.isVisible = False
         
         plotLayout3.addWidget(self.titleLabel) 
         plotLayout3.addWidget(self.image_item)        
@@ -252,11 +253,16 @@ class BaseWidget(QtWidgets.QMainWindow):
         showMetadata.setShortcut('Ctrl+M')
         showMetadata.setStatusTip('Show Metadata')
         showMetadata.triggered.connect(self.show_metadata)
-
+        
         # Show Metadata
         originalMetadata = QtWidgets.QAction('Original Meta', self)
         originalMetadata.setStatusTip('Show Original Metadata')
         originalMetadata.triggered.connect(self.show_metadata_original)
+
+        # Show Metadata
+        provenance = QtWidgets.QAction('Provenance', self)
+        provenance.setStatusTip('Show provenance of current dataset')
+        provenance.triggered.connect(self.show_provenance)
 
         self.vLegend = QtWidgets.QAction('Legend', self)
         self.vLegend.setShortcut('Ctrl+L')
@@ -275,6 +281,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         
         File.addAction(showMetadata)
         File.addAction(originalMetadata)
+        File.addAction(provenance)
         File.addAction(self.exit)
 
         view = self.menuBar().addMenu("&View")
@@ -336,7 +343,7 @@ class BaseWidget(QtWidgets.QMainWindow):
             return
         pos = event.pos()
         data = self.img.image
-        i, j = pos.y(), pos.x()
+        i, j = pos.x(), pos.y()
         i = int(np.clip(i, 0, data.shape[0] - 1))
         j = int(np.clip(j, 0, data.shape[1] - 1))
         val = data[i, j]
@@ -344,7 +351,13 @@ class BaseWidget(QtWidgets.QMainWindow):
         x = ppos.x()
         units = self.dataset.x.units
         self.setTitle(f"pos: ({x:0.1f}, {x:0.1f}){units} - pixel: ({i:d}, {j:d})  value: {val:3g}")
-
+    
+    def mouse_clicked_image(self, mouseClickEvent):
+        print('BaseWidget mouse_clicked_image', mouseClickEvent.pos)
+        
+        self.x_pixel = int(np.clip(pos.x(), 0, self.img.image.shape[0] - 1))
+        self.y_pixel = int(np.clip(pos.y(), 0, self.img.image.shape[1] - 1))
+            
     def setTitle(self, title=None, **args):
         """
         Set the title of the plot. Basic HTML formatting is allowed.
@@ -357,16 +370,20 @@ class BaseWidget(QtWidgets.QMainWindow):
             self.titleLabel.setText(title, **args)
 
     def show_metadata_original(self):
-        self.show_metadata(original=True)
+        self.show_dictionary(self.dataset.original_metadata,
+                             name= 'Original Metadata - ')
 
-    def show_metadata(self, original=False):
+    def show_metadata(self):
+        self.show_dictionary(self.dataset.metadata, 
+                             name='Metadata')
+    
+    def show_provenance(self):
+        self.show_dictionary(self.dataset.provenance, 
+                             name='Provenance' )
+
+    def show_dictionary(self, metadata, name=''):
         dialog = QtWidgets.QDialog(self)
-        if original:
-            metadata = self.dataset.original_metadata
-            dialog.setWindowTitle("Original Metadata - " + self.dataset.title)
-        else:
-            metadata = self.dataset.metadata
-            dialog.setWindowTitle("Metadata - " + self.dataset.title)
+        dialog.setWindowTitle(name + " - " + self.dataset.title)
         dialog.resize(400, 300)
 
         tree = QtWidgets.QTreeWidget(dialog)
@@ -574,6 +591,8 @@ class BaseWidget(QtWidgets.QMainWindow):
             if 'SPECTRUM' in self.dataset.data_type.name:
                 self.dataset.metadata['plot']['x'] = 0
                 self.dataset.metadata['plot']['y'] = 0
+            if 'experiment' not in self.dataset.metadata:
+                self.dataset.metadata['experiment'] = {}
         if self.main in self.datasets:
             self.dataset = self.datasets[self.main]
             self.status.showMessage("switched to " + list(self.datasets.keys())[0])

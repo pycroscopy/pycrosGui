@@ -33,8 +33,6 @@ import scipy
 
 from pyTEMlib import eels_tools
 
-from periodic_table import PeriodicTable
-
 class CoreLossDialog(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(CoreLossDialog, self).__init__(parent)
@@ -55,7 +53,7 @@ class CoreLossDialog(QtWidgets.QWidget):
         self.number_of_edges = 0
 
         self.elements_selected = []
-        self.periodic_table = PeriodicTable(self)
+        self.periodic_table = self.parent.periodic_table
 
     def get_sidbar(self): 
         validfloat = QtGui.QDoubleValidator()

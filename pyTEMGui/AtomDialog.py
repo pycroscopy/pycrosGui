@@ -126,7 +126,7 @@ class AtomDialog(QtWidgets.QWidget):
         self.startAtom_x_edit = QtWidgets.QLineEdit("0.1")
         self.startAtom_x_edit.setValidator(validfloat)
         # self.startAtom_x_edit.editingFinished.connect(self.set_resolution)
-        self.startAtom_x_unit = QtWidgets.QLabel("A")
+        self.startAtom_x_unit = QtWidgets.QLabel("nm")
         layout.addWidget(self.startAtom_x_label,row,0)
         layout.addWidget(self.startAtom_x_edit,row,1)
         layout.addWidget(self.startAtom_x_unit,row,2)
@@ -136,7 +136,7 @@ class AtomDialog(QtWidgets.QWidget):
         self.startAtom_y_edit = QtWidgets.QLineEdit("0.1")
         self.startAtom_y_edit.setValidator(validfloat)
         # self.startAtom_y_edit.editingFinished.connect(self.set_resolution)
-        self.startAtom_y_unit = QtWidgets.QLabel("A")
+        self.startAtom_y_unit = QtWidgets.QLabel("nm")
         layout.addWidget(self.startAtom_y_label,row,0)
         layout.addWidget(self.startAtom_y_edit,row,1)
         layout.addWidget(self.startAtom_y_unit,row,2)
@@ -204,6 +204,13 @@ class AtomDialog(QtWidgets.QWidget):
         self.mainList.setCurrentIndex(image_index)
         
         self.update_image_dataset()
+        self.parent.select_roi.sigRegionChangeFinished.connect(self.update_roi)
+        self.parent.select_roi.visible = True
+        self.parent.img.mouseClickEvent = self.mouseClickEvent
+
+    def update_roi(self):
+        self.startAtom_x_edit.setText(f"{self.parent.select_roi.pos().x()}")
+        self.startAtom_y_edit.setText(f"{self.parent.select_roi.pos().y()}")
             
            
     def update_image_dataset(self, value=0):
@@ -217,13 +224,26 @@ class AtomDialog(QtWidgets.QWidget):
         self.dataset = self.parent.dataset
         self.parent.plotUpdate()
         
+
+    def mouseClickEvent(self, ev):
+        print('mouseClickEvent', ev.pos(), 'double', ev.double())
+        if ev.double():
+            pos = ev.pos()
+            nm_pos = self.parent.img.mapToParent(pos)
+            #pos = np.array([pos.x(), pos.y()])/10
+            self.startAtom_y_edit.setText(f"{nm_pos.y():.2f}")
+            self.startAtom_x_edit.setText(f"{nm_pos.x():.2f}")
+            if self.atoms is None:
+                if 'atoms' in self.parent.dataset.metadata.keys():
+                    self.atoms = self.parent.dataset.metadata['atoms']['positions']
+            if self.atoms is not None:
+                self.start_atom = np.argmin(np.linalg.norm(self.atoms[:,:2] - np.array([pos.x(), pos.y()]), axis=1))
+                self.parent.status.showMessage(f'Atom {self.start_atom} at {nm_pos.x():.2f}nm, {nm_pos.y():.2f}nm')        
     def copy_atoms_to(self):
         pass
         
     def find_atoms(self,  value=0):
         atom_size = float(self.atomSize_edit.displayText())
-        print(self.slider.value())
-        print((1/(self.slider.value()/100)**-2))
         threshold = float(self.atomThreshold_edit.displayText())
         if hasattr(self.parent.dataset, 'x'):
             scale = self.parent.dataset.x[1]-self.parent.dataset.x[0]
@@ -254,11 +274,16 @@ class AtomDialog(QtWidgets.QWidget):
             hkl = np.array([int(i) for i in hkl.split()])
         except:
             hkl = np.array([int(i) for i in hkl.split(',')])
-        start_atom = int(self.startAtom_y_edit.displayText())
-        self.crystal.info['experimental']={'zone_axis': hkl, 'angle': 0}
-        
-        s, angles, out = breadth_first_search(self.atoms_A[:,:2], start_atom, self.crystal)
+        pos_x = float(self.startAtom_x_edit.displayText())
+        pos_y = float(self.startAtom_y_edit.displayText())
+        self.start_atom = np.argmin(np.linalg.norm(self.atoms[:,:2] - np.array([pos_x, pos_y]), axis=1))
                 
+        self.crystal.info['experimental']={'zone_axis': hkl, 'angle': 0}
+        lattice_parameter = self.crystal.cell.lengths()[:2]/10/self.parent.dataset.x.slope
+        print(lattice_parameter)
+        hopped, out = pyTEMlib.graph_tools.breadth_first_search_felxible(self.atoms[:,:2], self.start_atom, lattice_parameter)
+        self.parent.status.showMessage(f'Found {len(hopped)} Atoms')
+        angles = hopped[:,2]   
         print(np.unique(np.int16(np.mod(np.round(angles,0), self.crystal.cell.angles()[2])+0.5)))
         # print(out)
         
