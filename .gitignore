@@ -66,3 +66,13 @@ __pycache__/ImageDialog.cpython-312.pyc
 __pycache__/InfoDialog.cpython-312.pyc
 __pycache__/LowLossDialog.cpython-312.pyc
 __pycache__/PeakFitDialog.cpython-312.pyc
+.idea/inspectionProfiles/profiles_settings.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/pycrosGUI.iml
+.idea/vcs.xml
+pycrosGui/__pycache__/BaseWidget.cpython-312.pyc
+pycrosGui/__pycache__/DataDialog.cpython-312.pyc
+pycrosGui/__pycache__/BaseWidget.cpython-312.pyc
+pycrosGui/__pycache__/DataDialog.cpython-312.pyc

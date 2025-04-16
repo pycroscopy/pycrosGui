@@ -62,17 +62,30 @@ class ImageDialog(QtWidgets.QWidget):
         self.rigid_regButton.setCheckable(True)
         layout.addWidget(self.rigid_regButton,  row, 0)
         self.rigid_regButton.clicked.connect(self.rigid_registration)
-        
+
+        self.iteration_regButton = QtWidgets.QPushButton()
+        self.iteration_regButton.setText("Iterative Reg.")
+        self.iteration_regButton.setCheckable(True)
+        layout.addWidget(self.iteration_regButton, row, 1)
+        self.iteration_regButton.clicked.connect(self.rigid_registration)
+
+        self.phase_regButton = QtWidgets.QPushButton()
+        self.phase_regButton.setText("Phase Reg.")
+        self.phase_regButton.setCheckable(True)
+        layout.addWidget(self.phase_regButton, row, 2)
+        self.phase_regButton.clicked.connect(self.rigid_registration)
+
+        row += 1
         self.demon_regButton =  QtWidgets.QPushButton()
         self.demon_regButton.setText("Demon Reg.")
         self.demon_regButton.setCheckable(True)
-        layout.addWidget(self.demon_regButton,  row, 1)
+        layout.addWidget(self.demon_regButton,  row, 0)
         self.demon_regButton.clicked.connect(self.demon_registration)
         
         self.all_regButton =  QtWidgets.QPushButton()
         self.all_regButton.setText("Both Reg.")
         self.all_regButton.setCheckable(True)
-        layout.addWidget(self.all_regButton,  row, 2)
+        layout.addWidget(self.all_regButton,  row, 1)
         #self.all_regButton.clicked.connect(self.all_registration)
         
         row += 1
@@ -92,7 +105,7 @@ class ImageDialog(QtWidgets.QWidget):
         self.driftButton.setText("Get Drift")
         self.driftButton.setCheckable(True)
         layout.addWidget(self.driftButton,  row, 2)
-        #self.driftButton.clicked.connect(self.get_drift)
+        self.driftButton.clicked.connect(self.get_drift)
         
         row += 1
         self.processButton =  QtWidgets.QPushButton()
@@ -339,23 +352,48 @@ class ImageDialog(QtWidgets.QWidget):
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE')
             
     def rigid_registration(self, checked):
+        if 'Phase' in self.sender().text():
+            normalization = 'phase'
+            print('using phase normalization for rigid registration')
+        else:
+            normalization = None
+            print('using cross correlation for rigid registration')
+        print('using normalization', normalization, normalization==None)
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
             key =f'RigidReg-{self.parent.main.split("-")[-1]}'
             name = f'RigidReg-{self.parent.dataset.title.split("-")[-1]}'
             x = self.parent.dataset.get_image_dims(return_axis=True)[0]
-            
-            if abs(x[1]-x[0]) > 0.01:
-                do_sub_pixel = False
-            else:
-                do_sub_pixel = True
-            
-            dataset = image_tools.rigid_registration(self.parent.dataset,
-                                                     sub_pixel=do_sub_pixel)
+
+            dataset = image_tools.rigid_registration(self.parent.dataset, normalization = normalization)
             dataset.metadata.update(self.parent.dataset.metadata)
+            dataset.metadata
             self.parent.dataset.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.rigid_regButton.setChecked(False)
             self.parent.status.showMessage('Rigid Registration finished')
+        else:
+            self.parent.status.showMessage('Rigid Registration only for image stacks')
+
+    def get_drift(self):
+        if 'analysis' in self.parent.dataset.metadata:
+            if 'rigid_registration' in self.parent.dataset.metadata['analysis']:
+                if 'drift' in self.parent.dataset.metadata['analysis']['rigid_registration']:
+                    drift = self.parent.dataset.metadata['analysis']['rigid_registration']['drift']
+                    frames = np.arange(self.parent.dataset.shape[0])
+                    plt = pg.plot()
+                    plt.addLegend()
+                    plt.plot(frames, drift[:,0],  pen='r', symbol='x', symbolPen='r',
+                             symbolBrush=0.2, name='x drift')
+
+                    plt.plot(frames, drift[:,1],  pen='b', symbol='o', symbolPen='b',
+                                     symbolBrush=0.2, name='y-drift')
+
+                    plt.setLabel('left', 'drift', units='pixel')
+                    plt.setLabel('bottom',  'frames', units='#')
+
+
+                    plt.setWindowTitle('drift of '+dataset.title)
+
 
     def demon_registration(self,  value=0):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
@@ -372,6 +410,7 @@ class ImageDialog(QtWidgets.QWidget):
         
     def decon_lr(self):
         if self.parent.dataset.data_type.name != 'IMAGE':
+            self.parent.status.showMessage(f'Deconvolution only for images only,  not  {self.parent.dataset.data_type.name}')
             return
         if 'probe' not in self.parent.dataset.metadata.keys():
             atom_size = float(self.resolution_edit.displayText())
@@ -380,8 +419,9 @@ class ImageDialog(QtWidgets.QWidget):
             else:
                 scale = 1.
             gauss_diameter = atom_size/scale
-            if gauss_diameter < 3:
-                gauss_diameter = 3.0
+            if gauss_diameter < 1:
+                gauss_diameter = 1.0
+                gauss_diameter = 1.0
             print('gauss_diameter', gauss_diameter)
             probe = pyTEMlib.probe_tools.make_gauss(self.parent.dataset.shape[0], self.parent.dataset.shape[1], gauss_diameter)
         else:

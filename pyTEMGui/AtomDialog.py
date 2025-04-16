@@ -304,7 +304,6 @@ class AtomDialog(QtWidgets.QWidget):
         return plot_features   
 
 
-
 def breadth_first_search(graph, initial, layer, accuracy=3, Z_contrast=True):
     sane_crystal = False
     if isinstance(layer, ase.Atoms):

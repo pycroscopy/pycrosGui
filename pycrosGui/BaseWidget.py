@@ -41,6 +41,7 @@ class ImageView(pg.ImageView):
         super().roiChanged()
         for i in range(len(self.roiCurves)):
             self.roiCurves[i].setPen('black')
+
         
     
 class BaseWidget(QtWidgets.QMainWindow):    
@@ -354,7 +355,7 @@ class BaseWidget(QtWidgets.QMainWindow):
     
     def mouse_clicked_image(self, mouseClickEvent):
         print('BaseWidget mouse_clicked_image', mouseClickEvent.pos)
-        
+        pos = mouseClickEvent.pos()
         self.x_pixel = int(np.clip(pos.x(), 0, self.img.image.shape[0] - 1))
         self.y_pixel = int(np.clip(pos.y(), 0, self.img.image.shape[1] - 1))
             
@@ -532,10 +533,7 @@ class BaseWidget(QtWidgets.QMainWindow):
     def open_file(self, filename=None):
 
         self.main = pyTEMlib.file_tools.add_dataset_from_file(self.datasets, None, 'Channel', single_dataset=False)
-        print(self.main)
         
-        #if self.filename[-3:] == 'emd':
-        #    self.get_additional_metadata()
         self.status.showMessage("opened" + list(self.datasets.keys())[0])
         self.main = list(self.datasets.keys())[0]
         self.set_dataset()
@@ -546,25 +544,30 @@ class BaseWidget(QtWidgets.QMainWindow):
     def update_DataDialog(self):
         for key in self.datasets.keys():
             if isinstance(self.datasets[key], sidpy.Dataset):
+                if 'filename' in self.datasets[key].metadata:
+                    path, file_name = os.path.split(self.datasets[key].metadata['filename'])
+                    basename, extension = os.path.splitext(file_name)
+                else:
+                    basename = ""
                 if 'SPECT' in self.datasets[key].data_type.name:
                     self.status.showMessage("opened spectrum " + list(self.datasets.keys())[0])
                     
                     if len(self.DataDialog.spectrum_list.findItems('None', QtCore.Qt.MatchExactly))>0:
                         self.DataDialog.spectrum_list.clear()
                     if len(self.DataDialog.spectrum_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
-                        self.DataDialog.spectrum_list.addItems([f'{key}: {self.datasets[key].title}'])
+                        self.DataDialog.spectrum_list.addItems([f'{key}: {self.datasets[key].title:20} - {basename[:20]}'])
                 elif 'IMAGE_STACK' == self.datasets[key].data_type.name: 
                     self.status.showMessage("opened image stack " + list(self.datasets.keys())[0])
                     if len(self.DataDialog.image_list.findItems('None', QtCore.Qt.MatchExactly))>0:
                         self.DataDialog.image_list.clear()  
                     if len(self.DataDialog.image_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
-                        self.DataDialog.image_list.addItem(f'{key}: {self.datasets[key].title}')
+                        self.DataDialog.image_list.addItem(f'{key}: {self.datasets[key].title:20} - {basename[:20]}')
                 elif 'IMAGE' in self.datasets[key].data_type.name:
                     if 'survey' in self.datasets[key].title.lower():
                         if len(self.DataDialog.survey_list.findItems('None', QtCore.Qt.MatchExactly))>0:
                             self.DataDialog.survey_list.clear()  
                         if len(self.DataDialog.survey_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
-                            self.DataDialog.survey_list.addItem(f'{key}: {self.datasets[key].title}')
+                            self.DataDialog.survey_list.addItem(f'{key}: {self.datasets[key].title} - {basename[:20]}')
                     else:
                         if len(self.DataDialog.image_list.findItems('None', QtCore.Qt.MatchExactly))>0:
                             self.DataDialog.image_list.clear()  
@@ -606,6 +609,8 @@ class BaseWidget(QtWidgets.QMainWindow):
                 self.y = 0
         
     def plotUpdate(self,key = 'All'):
+        if self.main == "":
+            return
         self.plot_features = {} 
         self.dataset = self.datasets[self.main]
         if not isinstance(self.dataset, sidpy.Dataset):

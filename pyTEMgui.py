@@ -10,7 +10,7 @@
 # BaseWIdget with 
 # InfoWidget which changes with imae or spectrum file.
 # LowLoss, CoreLoss, and PeakFit dialogs work on spectra and spectral images
-#
+# Image and Atoms dialogs work on images.
 #################################################################
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
@@ -32,8 +32,8 @@ import pyqtgraph as pg
 #   Include pycroscopy Dialogs                                      #
 # =============================================================
 
-
 from pycrosGui.BaseWidget import BaseWidget
+
 from pyTEMGui.InfoDialog import InfoDialog
 from pyTEMGui.LowLossDialog import LowLossDialog
 from pyTEMGui.CoreLossDialog import CoreLossDialog
