@@ -52,7 +52,7 @@ class AtomDialog(QtWidgets.QWidget):
         row += 1
         self.regButton = QtWidgets.QPushButton()
         self.regButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
-        self.regButton.setText("Find Atoma")
+        self.regButton.setText("Find Atoms")
         layout.addWidget(self.regButton,  row,0, 1, 3)
         layout.setColumnStretch(0, 3) 
         #self.scaleButton.clicked.connect(self.rigi_registration)
@@ -250,7 +250,10 @@ class AtomDialog(QtWidgets.QWidget):
         else:
             scale = 1.
         self.parent.status.showMessage('Finding Atoms')
-        self.atoms = pyTEMlib.atom_tools.find_atoms(self.parent.dataset, atom_size=atom_size/scale, threshold=threshold)   
+        image = np.array(self.parent.dataset)
+        image -= image.min()
+        image /= image.max()
+        self.atoms = pyTEMlib.atom_tools.find_atoms(image, atom_size=atom_size/scale, threshold=threshold)
         if 'atoms' not in self.parent.dataset.metadata.keys():
             self.parent.dataset.metadata['atoms'] = {}     
         self.parent.status.showMessage(f'Found {len(self.atoms)} Atoms')

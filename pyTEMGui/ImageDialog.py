@@ -366,7 +366,7 @@ class ImageDialog(QtWidgets.QWidget):
 
             dataset = image_tools.rigid_registration(self.parent.dataset, normalization = normalization)
             dataset.metadata.update(self.parent.dataset.metadata)
-            dataset.metadata
+
             self.parent.dataset.metadata['plot']['additional_features'] = {}
             self.parent.add_image_dataset(key, name, dataset, data_type='IMAGE_STACK')
             self.rigid_regButton.setChecked(False)
@@ -379,20 +379,16 @@ class ImageDialog(QtWidgets.QWidget):
             if 'rigid_registration' in self.parent.dataset.metadata['analysis']:
                 if 'drift' in self.parent.dataset.metadata['analysis']['rigid_registration']:
                     drift = self.parent.dataset.metadata['analysis']['rigid_registration']['drift']
-                    frames = np.arange(self.parent.dataset.shape[0])
+                    frames = np.arange(len(drift))
                     plt = pg.plot()
                     plt.addLegend()
                     plt.plot(frames, drift[:,0],  pen='r', symbol='x', symbolPen='r',
                              symbolBrush=0.2, name='x drift')
-
                     plt.plot(frames, drift[:,1],  pen='b', symbol='o', symbolPen='b',
                                      symbolBrush=0.2, name='y-drift')
-
                     plt.setLabel('left', 'drift', units='pixel')
                     plt.setLabel('bottom',  'frames', units='#')
-
-
-                    plt.setWindowTitle('drift of '+dataset.title)
+                    plt.setWindowTitle('drift of '+self.parent.dataset.title)
 
 
     def demon_registration(self,  value=0):
