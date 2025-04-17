@@ -279,6 +279,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         
         File.addAction(openFile)
         File.addAction(saveFile)
+        File.addSeparator()
         
         File.addAction(showMetadata)
         File.addAction(originalMetadata)
@@ -290,33 +291,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         view.addSeparator()
         view.addAction(self.vLegend)
         
-        self.vImage = []
-        self.MviewImage = ['Cursor', '-','black', 'color', 'inverted','Si Window', 'Crosshair']
-        i = 0
-        for key in self.MviewImage:
-            if key == '-':
-                view.addSeparator()
-            else:
-                self.vImage.append( QtWidgets.QAction(key, self))
-                #self.vLegend.setShortcut('Ctrl+L')
-                #self.vLegend.setStatusTip('Switches Legend Display off and on')
-                self.vImage[i].setCheckable (True)
-                self.vImage[i].setChecked(False)
-                if key == 'black':
-                    self.vImage[i].setShortcut('Alt+b')
-                if key == 'color':
-                    self.vImage[i].setShortcut('Alt+c')
-                if key == 'inverted':
-                    self.vImage[i].setShortcut('Alt+i')
-                if key == 'Cursor':
-                    self.vImage[i].setShortcut('Alt+K')
-                    self.vImage[i].setChecked(True)
-                if key == 'Crosshair':
-                    self.vImage[i].setShortcut('Alt+H')
-                self.vImage[i].uniqueId =i+111
-                
-                view.addAction(self.vImage[i])
-                i += 1
+        
         
         self.help_menu = self.menuBar().addMenu("&Help")
         
@@ -325,6 +300,7 @@ class BaseWidget(QtWidgets.QMainWindow):
             tip='About pycrosGUI')
         
         self.add_actions(self.help_menu, (about_action,))
+        self.view = view
     
     def add_sidebar(self, dialog):
         dialogWidget = QtWidgets.QDockWidget(dialog.name, self)

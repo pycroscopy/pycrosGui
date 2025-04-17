@@ -88,9 +88,64 @@ class MainWidget(BaseWidget):
         self.ImageWidget.visibilityChanged.connect(self.image_update)
         self.AtomWidget.visibilityChanged.connect(self.atom_update)
         
+        
+        self.LowLossWidget.setVisible(False)
+        self.CoreLossWidget.setVisible(False)
+        self.PeakFitWidget.setVisible(False)
+        self.ImageWidget.setVisible(False)
+        self.AtomWidget.setVisible(False)
+        
         self.DataWidget.raise_()
-
-
+        
+        #FView Sidebar groubs
+        self.view.addSeparator()
+        
+        
+        self.image_visible = QtWidgets.QAction('Image', self, checkable=True)
+        self.image_visible.setShortcut('Ctrl+E')
+        self.image_visible.setStatusTip('Togle image dialogs visbility')
+        self.image_visible.toggled.connect(self.visible_image)
+        self.view.addAction(self.image_visible)
+        
+        self.EELS_visible = QtWidgets.QAction('EELS', self, checkable=True)
+        self.EELS_visible.setShortcut('Ctrl+E')
+        self.EELS_visible.setStatusTip('Togle EELS dialogs visbility')
+        self.EELS_visible.toggled.connect(self.visible_EELS)
+        self.view.addAction(self.EELS_visible)
+        
+        EDS_visible = QtWidgets.QAction('EELS', self, checkable=True)
+        EDS_visible.setShortcut('Ctrl+E')
+        EDS_visible.setStatusTip('Togle EDS dialogs visbility')
+        # EDS_visible.toggled.connect(self.visible_EDS)
+        self.view.addAction(EDS_visible)
+        
+    def visible_EELS(self, checked):
+        if checked:
+            self.LowLossWidget.setVisible(True)
+            self.CoreLossWidget.setVisible(True)
+            self.PeakFitWidget.setVisible(True)
+        else:
+            self.LowLossWidget.setVisible(False)
+            self.CoreLossWidget.setVisible(False)
+            self.PeakFitWidget.setVisible(False)
+            
+            
+    def visible_image(self, checked):
+        if checked:
+            self.ImageWidget.setVisible(True)
+            self.AtomWidget.setVisible(True)
+        else:
+            self.ImageWidget.setVisible(False)
+            self.AtomWidget.setVisible(False)
+            
+    def set_dataset(self):
+        super().set_dataset()
+        print(self.dataset.data_type.name)
+        if 'SPEC' in self.dataset.data_type.name:
+            self.EELS_visible.setChecked(True)
+        elif 'IMAGE' in self.dataset.data_type.name :
+            self.image_visible.setChecked(True)
+        
     def plot_additional_features(self, plt):
         """
         Adds additional features to the plot, as defined in the dialogs.
