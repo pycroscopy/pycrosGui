@@ -449,7 +449,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         
     def on_about(self):
         msg = f"pycrosGUI version {self.version}qt \n part of the pycrosocpy ecosystem\n by Gerd Duscher 2025 "
-        QtGui.QMessageBox.about(self, "About pycrosGUI", msg)
+        QtWidgets.QMessageBox.about(self, "About pycrosGUI", msg)
 
     def add_actions(self, target, actions):
         for action in actions:

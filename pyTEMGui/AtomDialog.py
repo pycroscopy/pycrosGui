@@ -250,10 +250,8 @@ class AtomDialog(QtWidgets.QWidget):
         else:
             scale = 1.
         self.parent.status.showMessage('Finding Atoms')
-        image = np.array(self.parent.dataset)
-        image -= image.min()
-        image /= image.max()
-        self.atoms = pyTEMlib.atom_tools.find_atoms(image, atom_size=atom_size/scale, threshold=threshold)
+        
+        self.atoms = pyTEMlib.atom_tools.find_atoms(self.parent.dataset, atom_size=atom_size, threshold=threshold)
         if 'atoms' not in self.parent.dataset.metadata.keys():
             self.parent.dataset.metadata['atoms'] = {}     
         self.parent.status.showMessage(f'Found {len(self.atoms)} Atoms')

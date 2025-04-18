@@ -16,8 +16,38 @@ import scipy
 from pyTEMlib import eels_tools
 import sys
 sys.path.insert(0,'/lustre/isaac24/proj/UTK0286/STEM_TF/Autoscript/autoscript_code_lib/')
-# from autoscript_tem_microscope_client import TemMicroscopeClient
-# from DTMicroscope.base.stem import DTSTEM
+try:
+    from autoscript_tem_microscope_client import TemMicroscopeClient
+    from autoscript_tem_microscope_client.enumerations import *
+    from autoscript_tem_microscope_client.structures import *
+except:
+    pass
+
+
+"""
+from autoscript_tem_microscope_client import TemMicroscopeClient
+from autoscript_tem_microscope_client.enumerations import *
+from autoscript_tem_microscope_client.structures import *
+
+microscope = TemMicroscopeClient()
+ip = ""
+if ip == "":
+    ip = input("Please enter the IP address of the microscope: ")
+    
+ip_TF": "10.46.217.241", 
+"port_TF": 9095,
+"ip_TF_sim": "10.46.217.242", 
+"port_TF_sim": 9090
+microscope = TemMicroscopeClient()
+microscope.connect(ip)
+print("Connected to the microscope")
+
+haadf_image = microscope.acquisition.acquire_stem_image(DetectorType.HAADF, 128, 4e-6)# haadf is pixel wise
+
+
+"""
+
+#from DTMicroscope.base.stem import DTSTEM
 
 class AcquDialog(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -55,13 +85,13 @@ class AcquDialog(QtWidgets.QWidget):
         
         row += 1
         self.ipLabel = QtWidgets.QLabel("IP Address")
-        self.ipEdit = QtWidgets.QLineEdit("11.11.000.123")
+        self.ipEdit = QtWidgets.QLineEdit("10.46.217.242")
         layout.addWidget(self.ipLabel,row,0)
         layout.addWidget(self.ipEdit,row,1)
         
         row += 1
         self.portLabel = QtWidgets.QLabel("Port")
-        self.portEdit = QtWidgets.QLineEdit("9095")
+        self.portEdit = QtWidgets.QLineEdit("9090")
         layout.addWidget(self.portLabel,row,0)
         layout.addWidget(self.portEdit,row,1)
         
@@ -138,11 +168,21 @@ class AcquDialog(QtWidgets.QWidget):
         layout.setColumnStretch(0, 3)        
         
         row += 1 
-        self.referenceList = QtWidgets.QComboBox(self)
-        self.referenceList.addItem("HAADF")
-        layout.addWidget(self.referenceList,  row,0, 1, 3)
-        layout.setColumnStretch(0, 3)  
-        self.referenceList.activated[str].connect(self.set_flux)
+        self.detectorList = QtWidgets.QListWidget()
+        self.detectorList.addItem("HAADF")
+        self.detectorList.addItem("MAADF")
+        self.detectorList.addItem("EDS")
+        self.detectorList.addItem("EELS")
+        self.detectorList.addItem("BF")
+        self.detectorList.addItem("FluCam")
+        self.detectorList.addItem("Ceta")
+        
+        
+        self.detectorList.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        
+        layout.addWidget(self.detectorList,  row,0, 1, 3)
+        layout.setColumnStretch(1, 3)  
+        self.detectorList.itemClicked.connect(self.selectDetectors)
         
         row += 1
         self.get_shiftButton = QtWidgets.QPushButton()
@@ -159,31 +199,76 @@ class AcquDialog(QtWidgets.QWidget):
         self.set_shiftButton.clicked.connect(self.shift_spectrum)
 
         row += 1
-        self.flux_ppmLabel = QtWidgets.QLabel("Gain")
-        self.flux_ppmEdit = QtWidgets.QLineEdit(" 1")
-        self.flux_ppmEdit.setValidator(validfloat)
-        self.flux_ppmEdit.editingFinished.connect(self.OnFlux_ppmEnter)
-        self.flux_ppmUnit = QtWidgets.QLabel("%")
-        layout.addWidget(self.flux_ppmLabel,row,0)
-        layout.addWidget(self.flux_ppmEdit,row,1)
-        layout.addWidget(self.flux_ppmUnit,row,2)
-
+        self.gainLabel = QtWidgets.QLabel("Gain")
+        self.gainEdit = QtWidgets.QLineEdit(" 1")
+        self.gainEdit.setValidator(validfloat)
+        self.gainEdit.editingFinished.connect(self.OnFlux_ppmEnter)
+        # self.flux_ppmUnit = QtWidgets.QLabel("%")
+        layout.addWidget(self.gainLabel,row,0)
+        layout.addWidget(self.gainEdit,row,1)
+        #layout.addWidget(self.flux_ppmUnit,row,2)
         
+        self.autoGainButton = QtWidgets.QPushButton()
+        self.autoGainButton.setText(" Auto Gain")
+        self.autoGainButton.setCheckable(True)
+        layout.addWidget(self.autoGainButton,  row, 2)
+        self.autoGainButton.setDisabled(True)
+        self.autoGainButton.clicked.connect(self.shift_spectrum)
+        
+       
+        row += 1
+        self.microscopeButton = QtWidgets.QPushButton()
+        self.microscopeButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
+        self.microscopeButton.setText("Microscope")
+        layout.addWidget(self.microscopeButton,  row,0, 1, 3)
+        self.microscopeButton.clicked.connect(self.print_mic_stage_position)
+        layout.setColumnStretch(0, 3)     
         
         return layout
     
     def connect(self):
-        self.microscope = DTSTEM(data_mode = 'simulation') # choice of 'simulation' or 'preloaded'
+        # self.microscope = DTSTEM(data_mode = 'simulation') # choice of 'simulation' or 'preloaded'
+        self.microscope = TemMicroscopeClient()
         ip = self.ipEdit.displayText()
         port = int(self.portEdit.displayText())
         self.microscope.connect(ip, port=port)
-        self.microscopeEdit.setText('Digital Twin')
+        self.microscopeEdit.setText('Autoscript Sim')
+        
+    def selectDetectors(self, ch):
+        currentDetector = self.detectorList.currentItem().text()
+        
+        if currentDetector == 'BF':
+            impossible_detector_indices = [3,5,6]
+        elif currentDetector == 'FluCam':
+            impossible_detector_indices = [3,4,6]
+        elif currentDetector == 'Ceta':
+            impossible_detector_indices = [3,4,5]
+        else:
+            impossible_detector_indices = []
+        
+                
+        
+        items = self.detectorList.selectedItems()
+        
+        for i in impossible_detector_indices:
+            self.detectorList.items(i).setSelected(False)
+        x = []
+        for i in range(len(items)):
+            x.append(str(self.detectorList.selectedItems()[i].text()))
+       
+
+        print (x)
         
     def acquire(self):
         fov  = float(self.fovEdit.displayText())
-        self.microscope.optics['fov'] = fov
-        image = self.microscope.get_scanned_image(size=512, dwell_time=1, detector='haadf', seed=42)
-        self.make_dataset(image)
+        #self.microscope.optics['fov'] = fov
+        # if self.DetectorType
+        
+        image = self.microscope.acquisition.acquire_stem_image(DetectorType.HAADF, 128, 4e-6)# haadf is pixel wise
+
+        print(dir(image.metadata))
+        #image = self.microscope.get_scanned_image(size=512, dwell_time=1, detector='haadf', seed=42)
+        self.make_dataset(image.data)
         
         self.parent.datasets[f'Acquired_{self.number:03d}'] = self.dataset
         
@@ -214,14 +299,15 @@ class AcquDialog(QtWidgets.QWidget):
                                           'y', units='nm', quantity='Length',
                                           dimension_type='spatial'))
         self.dataset = dataset
-        
-            
     
     def set_dataset(self):
         item_text = self.mainList.currentText()
         self.parent.main = item_text.split(':')[0]
         
-        
+    def print_mic_stage_position(self):
+        position = self.microscope.specimen.stage.position
+        pos_dict = {"x": position.x, "y": position.y, "z": position.z, "alpha": position.a, "beta": position.b}
+        print(pos_dict)
 
     def set_flux(self, value=0):
         if self.referenceList.currentText() == 'None':
