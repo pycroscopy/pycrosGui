@@ -43,19 +43,16 @@ class MicroscopeDialog(QtWidgets.QWidget):
         layout = QtWidgets.QGridLayout()
         row = 0
         self.vacuum_label = QtWidgets.QLabel("Vacuum")
-        layout.addWidget(self.valveButton, row, 0)
-        self.vacuum_edit = QtWidgets.QLineEdit("0")
-        self.vacuum_edit.setValidator(validfloat)
+        layout.addWidget(self.vacuum_label, row, 0)
+        self.vacuum_edit = QtWidgets.QLineEdit("Not Ready")
         layout.addWidget(self.vacuum_edit, row, 1)
         self.valveButton = QtWidgets.QPushButton()
-        self.valveButton.setText("Hopp")
+        self.valveButton.setText("Column valve")
         self.valveButton.setCheckable(True)
         layout.addWidget(self.valveButton, row, 2)
-        self.hoppButton.clicked.connect(self.valveButton)
+        # self.hoppButton.clicked.connect(self.valveButton)
 
-
-
-        self.mainList.activated[str].connect(self.update_image_dataset)
+        # self.mainList.activated[str].connect(self.update_image_dataset)
         
         row += 1
         self.opticButton = QtWidgets.QPushButton()
@@ -90,6 +87,20 @@ class MicroscopeDialog(QtWidgets.QWidget):
         layout.addWidget(self.focus_label, row, 0)
         layout.addWidget(self.focus_edit, row, 1)
         layout.addWidget(self.focus_unit, row, 2)
+
+        row += 1
+        self.c1a1Button = QtWidgets.QPushButton()
+        self.c1a1Button.setText("C1/A1")
+        layout.addWidget(self.c1a1Button, row, 0)
+
+        self.b2Button = QtWidgets.QPushButton()
+        self.b2Button.setText("B2")
+        layout.addWidget(self.b2Button, row, 1)
+
+        self.a2Button = QtWidgets.QPushButton()
+        self.a2Button.setText("A2")
+        layout.addWidget(self.a2Button, row, 2)
+
 
         row += 1
         self.magnification_label = QtWidgets.QLabel("Magnification")
@@ -270,6 +281,36 @@ class MicroscopeDialog(QtWidgets.QWidget):
             return
         image_list = ['None']
         image_index = 0
+
+        # if self.parent.microscope is not None:
+
+        """if microscope.vacuum.state == "Ready":
+     microscope.vacuum.column_valves.open()
+     print("open")
+print(microscope.vacuum.column_valves.state)
+axes = ['x', 'y', 'z', 'a', 'b']
+print(microscope.specimen.stage.position.x)
+print(microscope.specimen.stage.get_holder_type())
+for axis in axes:
+    print(microscope.specimen.stage.get_axis_limits(axis).min)
+    print(microscope.specimen.stage.get_axis_limits(axis).max)
+microscope.optics.monochromator.focus = -50
+print(microscope.optics.monochromator.focus)
+print(microscope.optics.monochromator.shift)
+print(microscope.optics.magnification.available_values)
+print(microscope.optics.magnification.value)
+
+relative_move(self, relative_position: 'Union[StagePosition, list, tuple]')
+ |      Moves the stage relatively to the current stage position.
+ absolute_move(self, position: 'Union[StagePosition, list, tuple]')
+ |      Moves the stage to a new position.
+ 
+ 
+ microscope.optics.optical_mode = 'Tem'
+microscope.optics.focus = 50*1e-9
+print(microscope.optics.focus)
+microscope.optics.optical_mode, microscope.optics.probe_mode, microscope.optics.spot_size_index
+    """
 
         if 'image' in self.parent.datasets['_relationship']:
             self.key = self.parent.datasets['_relationship']['image']
