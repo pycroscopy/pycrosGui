@@ -16,12 +16,13 @@ import scipy
 from pyTEMlib import eels_tools
 import sys
 sys.path.insert(0,'/lustre/isaac24/proj/UTK0286/STEM_TF/Autoscript/autoscript_code_lib/')
+acquistion_enabled = True
 try:
     from autoscript_tem_microscope_client import TemMicroscopeClient
     from autoscript_tem_microscope_client.enumerations import *
     from autoscript_tem_microscope_client.structures import *
 except:
-    pass
+    acquistion_enabled = False
 
 
 """
@@ -61,6 +62,7 @@ class AcquDialog(QtWidgets.QWidget):
         self.setWindowTitle(self.name)
         
         self.number = 0
+        self.parent.acquisition_enabled = acquistion_enabled
 
     def get_sidbar(self): 
         validfloat = QtGui.QDoubleValidator()
@@ -118,6 +120,16 @@ class AcquDialog(QtWidgets.QWidget):
         layout.addWidget(self.nFramesLabel,row,0)
         layout.addWidget(self.nFramesEdit,row,1)
         layout.addWidget(self.nFramesUnit,row,2)
+
+        row += 1
+        self.defocusLabel = QtWidgets.QLabel("df series")
+        self.defocusEdit = QtWidgets.QLineEdit("0")
+        self.defocusEdit.setValidator(validint)
+        # self.defocusEdit.editingFinished.connect(self.OnExposeEnter)
+        self.defocusUnit = QtWidgets.QLabel("nm")
+        layout.addWidget(self.defocusLabel, row, 0)
+        layout.addWidget(self.defocusEdit, row, 1)
+        layout.addWidget(self.defocusUnit, row, 2)
         
         row += 1
         self.timeLabel = QtWidgets.QLabel("Exp. Time")

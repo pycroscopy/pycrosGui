@@ -40,7 +40,9 @@ from pyTEMGui.CoreLossDialog import CoreLossDialog
 from pyTEMGui.PeakFitDialog import PeakFitDialog
 from pyTEMGui.ImageDialog import ImageDialog
 from pyTEMGui.AtomDialog import AtomDialog
+from pyTEMGui.ProbeDialog import ProbeDialog
 from pyTEMGui.AcquisitionDialog import AcquDialog
+from pyTEMGui.MicroscopeDialog import MicroscopeDialog
 # =======================================================================================================
 #                                      Main Window Module                                               #
 # =======================================================================================================
@@ -67,9 +69,15 @@ class MainWidget(BaseWidget):
         
         self.AtomDialog = AtomDialog(self)
         self.AtomWidget = self.add_sidebar(self.AtomDialog)
-        
+
+        self.ProbeDialog = ProbeDialog(self)
+        self.ProbeWidget = self.add_sidebar(self.ProbeDialog)
+
         self.AcquDialog = AcquDialog(self)
         self.AcquWidget = self.add_sidebar(self.AcquDialog)
+
+        self.MicroscopeDialog = MicroscopeDialog(self)
+        self.MicroscopeWidget = self.add_sidebar(self.MicroscopeDialog)
                                                                              
         # ##### Add the docks to the main window ######                                                                         
         self.tabifyDockWidget(self.DataWidget, self.InfoWidget) 
@@ -78,7 +86,9 @@ class MainWidget(BaseWidget):
         self.tabifyDockWidget(self.CoreLossWidget, self.PeakFitWidget)
         self.tabifyDockWidget(self.PeakFitWidget, self.ImageWidget)
         self.tabifyDockWidget(self.ImageWidget, self.AtomWidget)
-        self.tabifyDockWidget( self.AtomWidget, self.AcquWidget)
+        self.tabifyDockWidget( self.AtomWidget, self.ProbeWidget)
+        self.tabifyDockWidget( self.ProbeWidget, self.AcquWidget)
+        self.tabifyDockWidget(self.AcquWidget, self.MicroscopeWidget)
         
         # ##### Connect the visibility of the docks to the update function ###### 
         self.InfoWidget.visibilityChanged.connect(self.InfoDialog.updateInfo)
@@ -87,6 +97,7 @@ class MainWidget(BaseWidget):
         self.PeakFitWidget.visibilityChanged.connect(self.peak_fit_update)
         self.ImageWidget.visibilityChanged.connect(self.image_update)
         self.AtomWidget.visibilityChanged.connect(self.atom_update)
+        self.ProbeWidget.visibilityChanged.connect(self.probe_update)
         
         
         self.LowLossWidget.setVisible(False)
@@ -94,12 +105,12 @@ class MainWidget(BaseWidget):
         self.PeakFitWidget.setVisible(False)
         self.ImageWidget.setVisible(False)
         self.AtomWidget.setVisible(False)
+        self.ProbeWidget.setVisible(False)
         
         self.DataWidget.raise_()
         
         #FView Sidebar groubs
         self.view.addSeparator()
-        
         
         self.image_visible = QtWidgets.QAction('Image', self, checkable=True)
         self.image_visible.setShortcut('Ctrl+E')
@@ -113,7 +124,7 @@ class MainWidget(BaseWidget):
         self.EELS_visible.toggled.connect(self.visible_EELS)
         self.view.addAction(self.EELS_visible)
         
-        EDS_visible = QtWidgets.QAction('EELS', self, checkable=True)
+        EDS_visible = QtWidgets.QAction('EDS', self, checkable=True)
         EDS_visible.setShortcut('Ctrl+E')
         EDS_visible.setStatusTip('Togle EDS dialogs visbility')
         # EDS_visible.toggled.connect(self.visible_EDS)
@@ -134,9 +145,11 @@ class MainWidget(BaseWidget):
         if checked:
             self.ImageWidget.setVisible(True)
             self.AtomWidget.setVisible(True)
+            self.ProbeWidget.setVisible(True)
         else:
             self.ImageWidget.setVisible(False)
             self.AtomWidget.setVisible(False)
+            self.ProbeWidget.setVisible(False)
             
     def set_dataset(self):
         super().set_dataset()
@@ -220,6 +233,10 @@ class MainWidget(BaseWidget):
     def atom_update(self, visible):
         if visible:
             self.AtomDialog.update_sidebar()
+
+    def probe_update(self, visible):
+        if visible:
+            self.ProbeDialog.update_sidebar()
 
 
 def main(args=[]):
