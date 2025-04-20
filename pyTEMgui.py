@@ -50,7 +50,8 @@ from pyTEMGui.MicroscopeDialog import MicroscopeDialog
 class MainWidget(BaseWidget):
     def __init__(self, filename=None):
         super().__init__(filename=filename)
-        
+
+        self.microscope = None
         # ##### Add dialogs with additional capabilities                                                        
         self.InfoDialog = InfoDialog(self)
         self.InfoWidget = self.add_sidebar(self.InfoDialog)

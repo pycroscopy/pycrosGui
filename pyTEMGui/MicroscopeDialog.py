@@ -12,7 +12,15 @@ from PyQt5 import QtGui
 from PyQt5 import QtWidgets
 from PyQt5 import QtCore
 
-import pyqtgraph as pg
+import sys
+sys.path.insert(0,'/lustre/isaac24/proj/UTK0286/STEM_TF/Autoscript/autoscript_code_lib/')
+acquistion_enabled = True
+try:
+    from autoscript_tem_microscope_client import TemMicroscopeClient
+    from autoscript_tem_microscope_client.enumerations import *
+    from autoscript_tem_microscope_client.structures import *
+except:
+    acquistion_enabled = False
 
 import numpy as np
 import sidpy
@@ -25,7 +33,6 @@ import pyTEMlib.crystal_tools
 import pyTEMlib.graph_tools
 
 
-
 class MicroscopeDialog(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(MicroscopeDialog, self).__init__(parent)
@@ -35,10 +42,38 @@ class MicroscopeDialog(QtWidgets.QWidget):
         self.atoms = None
         self.setLayout(layout)    
         self.name = 'Mic'
+        if acquistion_enabled:
+            self.microscope = TemMicroscopeClient()
+            self.parent.microscope = self.microscope
+        else:
+            self.parent.microscope = None
         self.setWindowTitle(self.name)
         
     def get_sidbar(self): 
         validfloat = QtGui.QDoubleValidator()
+
+        row += 1
+        self.connectButton = QtWidgets.QPushButton()
+        self.connectButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
+        self.connectButton.setText("Connect to Microsopcope")
+        self.connectButton.setCheckable(True)
+        self.connectButton.setChecked(False)
+        layout.addWidget(self.connectButton, row, 0, 1, 3)
+        layout.setColumnStretch(0, 3)
+        self.connectButton.clicked.connect(self.connect)
+
+        row += 1
+        self.ipLabel = QtWidgets.QLabel("IP Address")
+        self.ipEdit = QtWidgets.QLineEdit("10.46.217.242")
+        layout.addWidget(self.ipLabel, row, 0)
+        layout.addWidget(self.ipEdit, row, 1)
+
+        row += 1
+        self.portLabel = QtWidgets.QLabel("Port")
+        self.portEdit = QtWidgets.QLineEdit("9090")
+        layout.addWidget(self.portLabel, row, 0)
+        layout.addWidget(self.portEdit, row, 1)
+
         
         layout = QtWidgets.QGridLayout()
         row = 0
@@ -182,100 +217,23 @@ class MicroscopeDialog(QtWidgets.QWidget):
         layout.addWidget(self.stage_b_edit, row, 1)
         layout.addWidget(self.stage_b_unit, row, 2)
 
-        row += 1
-        self.atomsButton = QtWidgets.QPushButton()
-        self.atomsButton.setText("Find Atoms")
-        self.atomsButton.setCheckable(True)
-        layout.addWidget(self.atomsButton,  row, 0)
-        self.atomsButton.clicked.connect(self.find_atoms)
-        
-        self.refineButton = QtWidgets.QPushButton()
-        self.refineButton.setText("Refine Atoms")
-        self.refineButton.setCheckable(True)
-        layout.addWidget(self.refineButton,  row, 1)
-        
-        row += 1 
-        self.copyToList = QtWidgets.QComboBox(self)
-        self.copyToList.addItem("None")
-        layout.addWidget(self.copyToList,  row,1, 2, 3)
-        layout.setColumnStretch(1, 3)  
-        self.copyToList.activated[str].connect(self.copy_atoms_to)
-        self.copyAtom_label = QtWidgets.QLabel("Copy atoms")
-        layout.addWidget(self.copyAtom_label,row,0)
-        
-        row += 1
-        self.clusterButton =  QtWidgets.QPushButton()
-        self.clusterButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
-        self.clusterButton.setText("Cluster Tools")
-        layout.addWidget(self.clusterButton,  row,0, 1, 3)
-        layout.setColumnStretch(0, 3) 
-        # self.scaleButton.clicked.connect(self.cursor2energy_scale)
-       
-        row += 1
-        self.graphButton =  QtWidgets.QPushButton()
-        self.graphButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
-        self.graphButton.setText("Graph Tools")
-        layout.addWidget(self.graphButton,  row,0, 1, 3)
-        layout.setColumnStretch(0, 3) 
-        # self.scaleButton.clicked.connect(self.cbreath_first)
-        
-        row += 1
-        self.startAtom_x_label = QtWidgets.QLabel("Start Atom x")
-        self.startAtom_x_edit = QtWidgets.QLineEdit("0.1")
-        self.startAtom_x_edit.setValidator(validfloat)
-        # self.startAtom_x_edit.editingFinished.connect(self.set_resolution)
-        self.startAtom_x_unit = QtWidgets.QLabel("nm")
-        layout.addWidget(self.startAtom_x_label,row,0)
-        layout.addWidget(self.startAtom_x_edit,row,1)
-        layout.addWidget(self.startAtom_x_unit,row,2)
-        
-        row += 1
-        self.startAtom_y_label = QtWidgets.QLabel("Start Atom y")
-        self.startAtom_y_edit = QtWidgets.QLineEdit("0.1")
-        self.startAtom_y_edit.setValidator(validfloat)
-        # self.startAtom_y_edit.editingFinished.connect(self.set_resolution)
-        self.startAtom_y_unit = QtWidgets.QLabel("nm")
-        layout.addWidget(self.startAtom_y_label,row,0)
-        layout.addWidget(self.startAtom_y_edit,row,1)
-        layout.addWidget(self.startAtom_y_unit,row,2)
-        
-        row += 1 
-        self.structureList = QtWidgets.QComboBox(self)
-        structure_list = []
-        for crystal in pyTEMlib.crystal_tools.crystal_data_base.values():
-            structure_list.append(crystal['crystal_name'])
-        self.structureList.addItems(sorted(set(structure_list)))
-        layout.addWidget(self.structureList,  row,1, 2, 3)
-        layout.setColumnStretch(1, 3)  
-        self.structureList.activated[str].connect(self.set_structure)
-        
-        self.structure_label = QtWidgets.QLabel("Structures")
-        layout.addWidget(self.structure_label,row,0)
-        
-        row += 1
-        self.zoneAxis_label = QtWidgets.QLabel("Zone axis")
-        self.zoneAxis_edit = QtWidgets.QLineEdit("0 0 1")
-        # self.zoneAxis_edit.editingFinished.connect(self.set_resolution)
-        self.zoneAxis_unit = QtWidgets.QLabel("h k l")
-        layout.addWidget(self.zoneAxis_label,row,0)
-        layout.addWidget(self.zoneAxis_edit,row,1)
-        layout.addWidget(self.zoneAxis_unit,row,2)
-        
-        row += 1
-        self.hoppButton = QtWidgets.QPushButton()
-        self.hoppButton.setText("Hopp")
-        self.hoppButton.setCheckable(True)
-        layout.addWidget(self.hoppButton,  row, 0)
-        self.hoppButton.clicked.connect(self.graph_hopp)
-        
-        self.polygonButton = QtWidgets.QPushButton()
-        self.polygonButton.setText("Polygons")
-        self.polygonButton.setCheckable(True)
-        layout.addWidget(self.polygonButton,  row, 1)
-        self.polygonButton.clicked.connect(self.find_atoms)
+
         
         return layout
-        
+
+    def connect(self):
+        """
+        Connect with autoscript to microscope
+        """
+        ip = self.ipEdit.displayText()
+        if self.connectButton.isChecked():
+            port = int(self.portEdit.displayText())
+            self.microscope.connect(ip, port=port)
+            self.connectButton.setText(f"Connected: {}self.microscope.system.name}")
+        else:
+            self.connectButton.setText(f"Microscope")
+            self.microscope.disconnect()
+
     def update_sidebar(self):
         if '_relationship' not in self.parent.datasets:
             return

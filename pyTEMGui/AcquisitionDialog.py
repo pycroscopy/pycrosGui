@@ -67,43 +67,9 @@ class AcquDialog(QtWidgets.QWidget):
     def get_sidbar(self): 
         validfloat = QtGui.QDoubleValidator()
         validint = QtGui.QIntValidator()
-        
-        layout = QtWidgets.QGridLayout()
-        row = 0 
-        self.mainList = QtWidgets.QComboBox(self)
-        self.mainList.addItem(".")
-        layout.addWidget(self.mainList,  row,0, 1, 3)
-        layout.setColumnStretch(0, 3)  
 
-        self.mainList.activated[str].connect(self.set_dataset)
-        
-        row += 1
-        self.connectButton = QtWidgets.QPushButton()
-        self.connectButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
-        self.connectButton.setText("Connect to Microsopcope")
-        layout.addWidget(self.connectButton,  row,0, 1, 3)
-        layout.setColumnStretch(0, 3) 
-        self.connectButton.clicked.connect(self.connect)
-        
-        row += 1
-        self.ipLabel = QtWidgets.QLabel("IP Address")
-        self.ipEdit = QtWidgets.QLineEdit("10.46.217.242")
-        layout.addWidget(self.ipLabel,row,0)
-        layout.addWidget(self.ipEdit,row,1)
-        
-        row += 1
-        self.portLabel = QtWidgets.QLabel("Port")
-        self.portEdit = QtWidgets.QLineEdit("9090")
-        layout.addWidget(self.portLabel,row,0)
-        layout.addWidget(self.portEdit,row,1)
-        
-        row += 1
-        self.microscopeLabel = QtWidgets.QLabel("Connected to")
-        self.microscopeEdit = QtWidgets.QLineEdit("None")
-        layout.addWidget(self.microscopeLabel,row,0)
-        layout.addWidget(self.microscopeEdit,row,1)
-        
-        row += 1
+        layout = QtWidgets.QGridLayout()
+        row = 0
         self.experimentButton = QtWidgets.QPushButton()
         self.experimentButton.setStyleSheet('QPushButton {background-color: blue; color: white;}')
         self.experimentButton.setText("Acquisition")
@@ -188,8 +154,6 @@ class AcquDialog(QtWidgets.QWidget):
         self.detectorList.addItem("BF")
         self.detectorList.addItem("FluCam")
         self.detectorList.addItem("Ceta")
-        
-        
         self.detectorList.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         
         layout.addWidget(self.detectorList,  row,0, 1, 3)
@@ -237,14 +201,6 @@ class AcquDialog(QtWidgets.QWidget):
         layout.setColumnStretch(0, 3)     
         
         return layout
-    
-    def connect(self):
-        # self.microscope = DTSTEM(data_mode = 'simulation') # choice of 'simulation' or 'preloaded'
-        self.microscope = TemMicroscopeClient()
-        ip = self.ipEdit.displayText()
-        port = int(self.portEdit.displayText())
-        self.microscope.connect(ip, port=port)
-        self.microscopeEdit.setText('Autoscript Sim')
         
     def selectDetectors(self, ch):
         currentDetector = self.detectorList.currentItem().text()
@@ -275,7 +231,7 @@ class AcquDialog(QtWidgets.QWidget):
         fov  = float(self.fovEdit.displayText())
         #self.microscope.optics['fov'] = fov
         # if self.DetectorType
-        
+        self.microscope = self.parent.microscope
         image = self.microscope.acquisition.acquire_stem_image(DetectorType.HAADF, 128, 4e-6)# haadf is pixel wise
 
         print(dir(image.metadata))
