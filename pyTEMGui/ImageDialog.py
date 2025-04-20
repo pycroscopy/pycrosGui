@@ -253,7 +253,7 @@ class ImageDialog(QtWidgets.QWidget):
             filtered_dataset = pyTEMlib.image_tools.adaptive_fourier_filter(self.parent.dataset, spots, 
                                                                     low_pass=low_pass, reflection_radius=.3)
             key =f'AFF-{self.parent.main}'
-            name = f'AFF-{self.parent.dataset.title.split('-')[0]}'
+            name = f"AFF-{self.parent.dataset.title.split('-')[0]}"
             
             filtered_dataset.metadata = self.parent.dataset.metadata.copy()
             self.parent.dataset.metadata['plot']['additional_features'] = {}
@@ -282,7 +282,7 @@ class ImageDialog(QtWidgets.QWidget):
         for index, key in enumerate(self.parent.datasets.keys()):
             if isinstance(self.parent.datasets[key], sidpy.Dataset):
                 if 'IMAG' in self.parent.datasets[key].data_type.name:
-                    image_list.append(f'{key}: {self.parent.datasets[key].title}')
+                    image_list.append(f"{key}: {self.parent.datasets[key].title}")
                 if key == self.key:
                     image_index = index + 1
 
@@ -335,7 +335,7 @@ class ImageDialog(QtWidgets.QWidget):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
             dims = self.parent.dataset.get_dimensions_by_type(sidpy.DimensionType.TEMPORAL, return_axis=False)
             key =f'Sum-{self.parent.main}'
-            name = f'Sum-{self.parent.dataset.title.split('-')[0]}'
+            name = f"Sum-{self.parent.dataset.title.split('-')[0]}"
             dataset = self.parent.dataset.sum(axis=dims[0])
             dataset.metadata = self.parent.dataset.metadata.copy()
             self.parent.dataset.metadata['plot']['additional_features'] = {}
@@ -344,8 +344,8 @@ class ImageDialog(QtWidgets.QWidget):
     def average_stack(self, value=0):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
             dims = self.parent.dataset.get_dimensions_by_type(sidpy.DimensionType.TEMPORAL, return_axis=False)
-            key =f'Sum-{self.parent.main}'
-            name = f'Sum-{self.dataset.title.split('-')[0]}'
+            key =f'Average-{self.parent.main}'
+            name = f"Average-{self.dataset.title.split('-')[0]}"
             dataset = self.parent.dataset.mean(axis=dims[0])
             dataset.metadata = self.parent.dataset.metadata.copy()
             
@@ -360,8 +360,8 @@ class ImageDialog(QtWidgets.QWidget):
             print('using cross correlation for rigid registration')
         print('using normalization', normalization, normalization==None)
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
-            key =f'RigidReg-{self.parent.main.split("-")[-1]}'
-            name = f'RigidReg-{self.parent.dataset.title.split("-")[-1]}'
+            key =f"RigidReg-{self.parent.main.split('-')[-1]}"
+            name = f"RigidReg-{self.parent.dataset.title.split('-')[-1]}"
             x = self.parent.dataset.get_image_dims(return_axis=True)[0]
 
             dataset = image_tools.rigid_registration(self.parent.dataset, normalization = normalization)
@@ -394,8 +394,8 @@ class ImageDialog(QtWidgets.QWidget):
     def demon_registration(self,  value=0):
         if self.parent.dataset.data_type.name == 'IMAGE_STACK':
             self.parent.status.showMessage('Demon Registration started')
-            key =f'DemonReg-{self.parent.main.split("-")[-1]}'
-            name = f'DemonReg-{self.parent.dataset.title.split("-")[-1]}'
+            key =f"DemonReg-{self.parent.main.split('-')[-1]}"
+            name = f"DemonReg-{self.parent.dataset.title.split('-')[-1]}"
             dataset = image_tools.demon_registration(self.parent.dataset)
 
             dataset.metadata.update(self.parent.dataset.metadata)
@@ -425,8 +425,8 @@ class ImageDialog(QtWidgets.QWidget):
       
         print('Deconvolution of ', self.parent.dataset.title)
         LR_dataset = image_tools.decon_lr(self.parent.dataset, probe, verbose=False)
-        key =f'LRdeconvol-{self.parent.main.split("-")[-1]}'
-        name = f'LRdeconvol-{self.dataset.title.split("-")[-1]}'
+        key =f"LRdeconvol-{self.parent.main.split('-')[-1]}"
+        name = f"LRdeconvol-{self.dataset.title.split('-')[-1]}"
         iterations = 0
         if 'Deconvolution' in LR_dataset.metadata:
             if 'Lucy-Richardson' in LR_dataset.metadata['Deconvolution']:
