@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycrosGUI"
+version = "0.2.2"
+description = "pycrosGUI: Basic GUI to view microscopy data"
+readme = "README.rst"
+license = {text = "MIT"}
+authors = [
+    {name = "Gerd Duscher", email = "gduscher@utk.edu"}
+]
+keywords = [
+    "imaging", "spectra", "transmission", "electron", "microscopy",
+    "scientific", "scanning", "eels", "visualization", "processing",
+    "storage", "hdf5", "diffraction"
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Cython",
+    "Programming Language :: Python :: 3",    
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Topic :: Scientific/Engineering :: Information Analysis"
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pyTEMlib",
+    "pyqt5",
+    "pyqtgraph"
+]
+
+[project.urls]
+Homepage = "https://pycroscopy.github.io/pycrosGUI/about.html"
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-runner"
+]
+
+[tool.setuptools]
+include-package-data = true
+packages = ["pycrosGUI"]
+
+[project.scripts]
+pycrosGUI = "pycrosGUI:main"
