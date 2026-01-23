@@ -37,7 +37,10 @@ dependencies = [
     "pyTEMlib",
     "pyqt5",
     "pyqtgraph"
+    "pytest"
+    "pytest-runner"
 ]
+
 
 [project.urls]
 Homepage = "https://pycroscopy.github.io/pycrosGUI/about.html"
