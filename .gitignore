@@ -115,3 +115,5 @@ pycrosGUI.egg-info/PKG-INFO
 pycrosGUI.egg-info/requires.txt
 pycrosGUI.egg-info/SOURCES.txt
 pycrosGUI.egg-info/top_level.txt
+__pycache__/
+*.pyc
