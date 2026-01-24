@@ -46,3 +46,8 @@ or via conda:
 ``conda install pyTEMlib -c conda-forge``
 
 These installation options are also available in the `example notebooks <https://github.com/pycroscopy/pyTEMlib/notebooks>`_
+
+Then run
+
+``python3 -m pycrosGUI.main``
+
