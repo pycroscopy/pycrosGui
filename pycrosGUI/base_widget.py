@@ -30,6 +30,7 @@ from .data_dialog import DataDialog
 sys.path.insert(0, '../pyTEMlib/')
 import pyTEMlib
 
+
 class ImageView(pg.ImageView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -39,6 +40,7 @@ class ImageView(pg.ImageView):
         super().roiChanged()
         for i in range(len(self.roiCurves)):
             self.roiCurves[i].setPen('black')
+
 
 class BaseWidget(QtWidgets.QMainWindow):
     def __init__(self, sidebar=[], filename=None):
@@ -50,37 +52,37 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.tabCurrent = 1
         self.x = 0
         self.y = 0
-        self.legend_visible = True 
-        
+        self.legend_visible = True
+
         if filename is None:
             self.dir_name = pyTEMlib.file_tools.get_last_path()
             self.filename = ''
         else:
             self.dir_name = os.path.dirname(filename)
             self.filename = filename
-        
+
         self._init_ui()
 
     def _init_ui(self):
         self.setWindowTitle(f'pycrosGUI version {self.version}qt')
-        
-        # MODERN STYLING: Fixes overlap, white-on-white, and adds rounded corners
+
+        # MODERN STYLING: Fixes overlap and adds rounded corners
         self.setStyleSheet("""
             QMainWindow { background-color: #f0f2f5; }
             QTabWidget::pane { border: 1px solid #c9ccd1; background: #ffffff; border-radius: 8px; }
             QTabBar::tab { background: #e2e5e9; padding: 10px 20px; border: 1px solid #c9ccd1; border-top-left-radius: 8px; border-top-right-radius: 8px; margin-right: 2px; color: #333; }
             QTabBar::tab:selected { background: #ffffff; border-bottom-color: #ffffff; font-weight: bold; }
-            
+
             QLineEdit { border: 1px solid #adb5bd; border-radius: 6px; padding: 5px; background: white; color: black; min-width: 100px; }
             QLabel { color: #212529; font-weight: bold; }
-            
+
             /* Sidebar Styling */
             QListWidget, QTreeWidget { border: 1px solid #adb5bd; border-radius: 6px; background: white; color: black; margin-bottom: 5px; }
-            QListWidget::item { padding: 8px; border-bottom: 1px solid #eee; }
-            
-            QPushButton { background-color: #e2e5e9; border: 1px solid #adb5bd; border-radius: 4px; padding: 5px 15px; color: #333; min-width: 80px; }
+            QListWidget::item { padding: 10px; border-bottom: 1px solid #f0f1f2; }
+
+            QPushButton { background-color: #e2e5e9; border: 1px solid #adb5bd; border-radius: 6px; padding: 6px 15px; color: #333; min-width: 90px; }
             QPushButton:hover { background-color: #d1d4d7; }
-            
+
             QDockWidget { color: #333; font-weight: bold; }
             QDockWidget::title { background: #e2e5e9; padding: 6px; border-radius: 4px; }
         """)
@@ -91,17 +93,17 @@ class BaseWidget(QtWidgets.QMainWindow):
         # --- Tab 1: Spectrum ---
         self.plot1 = QtWidgets.QWidget()
         p1_layout = QtWidgets.QVBoxLayout(self.plot1)
-        
+
         top_frame = QtWidgets.QFrame()
         top_frame.setStyleSheet("background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;")
         grid = QtWidgets.QGridLayout(top_frame)
-        grid.setHorizontalSpacing(25)
+        grid.setHorizontalSpacing(30)
 
         validfloat = QtGui.QDoubleValidator()
         self.left_cursor_label = QtWidgets.QLabel("Cursor Start")
         self.left_cursor_value = QtWidgets.QLineEdit("30.0")
         self.left_cursor_value.setValidator(validfloat)
-        
+
         self.right_cursor_label = QtWidgets.QLabel("End")
         self.right_cursor_value = QtWidgets.QLineEdit("100.0")
         self.right_cursor_value.setValidator(validfloat)
@@ -115,7 +117,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.plot_param_window = pg.PlotWidget()
         pg.setConfigOption('background', 'w')
         pg.setConfigOption('foreground', 'k')
-        
+
         p1_layout.addWidget(top_frame)
         p1_layout.addWidget(self.plot_param_window)
 
@@ -148,12 +150,12 @@ class BaseWidget(QtWidgets.QMainWindow):
 
         # --- Sidebars ---
         self.data_widget = QtWidgets.QDockWidget("Datasets", self)
-        self.data_dialog = DataDialog(self) 
+        self.data_dialog = DataDialog(self)
         self.data_widget.setWidget(self.data_dialog)
         self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.data_widget)
 
         self.select_widget = QtWidgets.QDockWidget("Select", self)
-        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.select_widget)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.select_widget)
 
         self._create_menus()
 
@@ -162,7 +164,7 @@ class BaseWidget(QtWidgets.QMainWindow):
         file_menu = menubar.addMenu('&File')
         file_menu.addAction(QtWidgets.QAction('Open', self, shortcut='Ctrl+O', triggered=self.open_file))
         file_menu.addAction(QtWidgets.QAction('Save', self, shortcut='Ctrl+S', triggered=self.save_file))
-        
+
         window_menu = menubar.addMenu('&Windows')
         window_menu.addAction(QtWidgets.QAction('Restore Sidebars', self, triggered=self.restore_sidebars))
 
@@ -170,45 +172,63 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.data_widget.show()
         self.select_widget.show()
 
+    # --- BUTTON FUNCTIONALITY START ---
+
     def remove_dataset(self):
-        """Action for the 'Remove' button in the sidebar."""
-        if self.main in self.datasets:
+        """Action for the 'Remove' button in the DataDialog sidebar."""
+        # Find which item is currently selected in the data dialog lists
+        if not self.main or self.main not in self.datasets:
+            QtWidgets.QMessageBox.warning(self, "Warning", "No dataset selected to remove.")
+            return
+
+        reply = QtWidgets.QMessageBox.question(self, 'Confirm Remove',
+                                               f"Are you sure you want to remove '{self.main}'?",
+                                               QtWidgets.QMessageBox.StandardButton.Yes |
+                                               QtWidgets.QMessageBox.StandardButton.No)
+
+        if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             del self.datasets[self.main]
             self.main = ""
             self.update_DataDialog()
-            self.status_msg("Dataset Removed")
+            self.statusBar().showMessage("Dataset removed.")
+
+    def save_file(self, filename=None):
+        """Action for the 'Save' button in the sidebar and File menu."""
+        if not self.datasets:
+            QtWidgets.QMessageBox.warning(self, "Warning", "No data available to save.")
+            return
+
+        if not filename:
+            path = pyTEMlib.file_tools.get_last_path()
+            filename, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save pycroscopy file",
+                                                                path, "nsid Files (*.hf5)")
+
+        if filename:
+            try:
+                h5_group = pyTEMlib.file_tools.save_dataset(self.datasets, filename)
+                h5_group.file.close()
+                self.statusBar().showMessage(f"File saved to {os.path.basename(filename)}")
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Error", f"Could not save file: {str(e)}")
+
+    # --- BUTTON FUNCTIONALITY END ---
 
     def open_file(self, filename=None):
         path = pyTEMlib.file_tools.get_last_path()
         if not filename:
-            filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open File", path)
+            filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file...", path)
         if filename:
-            self.main = pyTEMlib.file_tools.add_dataset_from_file(self.datasets, filename, 'Channel')
+            self.main = pyTEMlib.file_tools.add_dataset_from_file(self.datasets, filename, 'Channel',
+                                                                  single_dataset=False)
             self.update_DataDialog()
-
-    def save_file(self, filename=None):
-        if not self.main: return
-        file_name, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save File", filter="nsid Files (*.hf5)")
-        if file_name:
-            h5 = pyTEMlib.file_tools.save_dataset(self.datasets, file_name)
-            h5.file.close()
-            self.status_msg("File Saved")
-
-    def status_msg(self, text):
-        self.statusBar().showMessage(text)
-
-    def updateTab(self, num):
-        self.tabCurrent = num
 
     def update_DataDialog(self):
         if hasattr(self.data_dialog, 'update_sidebar'):
             self.data_dialog.update_sidebar()
 
-    def imageHoverEvent(self, event):
-        pass
+    def updateTab(self, num):
+        self.tabCurrent = num
 
-    def mouse_clicked_image(self, event):
-        pass
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
