@@ -3,23 +3,20 @@
 ######## pycrosGui BaseWidget
 # # part of the pycroscopy ecosystem
 # #
-# # by Gerd Duscher
+# # by Gerd Duscher and Levi Dunn
 # # Start Feb 2025
 # This Base Widget is to be extended for pycroscopy GUIs
 # running under python 3 using pyqt, and pyQt5 as GUI mashine
 # ################################################################
 """
-import os as os
+import os
 import sys
 
 try:
-    from PyQt6 import QtCore
-    from PyQt6 import QtWidgets
-    from PyQt6 import QtGui
+    from PyQt6 import QtCore, QtWidgets, QtGui
 except ImportError:
-    from PyQt5 import QtCore
-    from PyQt5 import QtGui
-    from PyQt5 import QtWidgets
+    from PyQt5 import QtCore, QtGui, QtWidgets
+
 import numpy as np
 import pyqtgraph as pg
 import sidpy
@@ -32,7 +29,6 @@ from .data_dialog import DataDialog
 # =============================================================
 sys.path.insert(0, '../pyTEMlib/')
 import pyTEMlib
-print('pyTEMlib version :', pyTEMlib.__version__)
 
 class ImageView(pg.ImageView):
     def __init__(self, *args, **kwargs):
@@ -50,766 +46,173 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.version = '2025-1-1'
         self.dataset = None
         self.datasets = {}
-
-        self.extensions = '*'
-        self.filename = filename
-        self.dataset_list = ['None']
-        self.image_list = ['Sum']
+        self.main = ""
+        self.tabCurrent = 1
+        self.x = 0
+        self.y = 0
+        self.legend_visible = True 
+        
         if filename is None:
             self.dir_name = pyTEMlib.file_tools.get_last_path()
             self.filename = ''
         else:
             self.dir_name = os.path.dirname(filename)
             self.filename = filename
-        if not os.path.isdir(self.dir_name):
-            self.dir_name = '.'
-        self.save_path = True
+        
+        self._init_ui()
 
-        self.image = 'Sum'
-        self.main = ""
-        self.cursor = None
-        self.intensity_scale = 1.0
+    def _init_ui(self):
+        self.setWindowTitle(f'pycrosGUI version {self.version}qt')
+        
+        # MODERN STYLING: Fixes overlap, white-on-white, and adds rounded corners
+        self.setStyleSheet("""
+            QMainWindow { background-color: #f0f2f5; }
+            QTabWidget::pane { border: 1px solid #c9ccd1; background: #ffffff; border-radius: 8px; }
+            QTabBar::tab { background: #e2e5e9; padding: 10px 20px; border: 1px solid #c9ccd1; border-top-left-radius: 8px; border-top-right-radius: 8px; margin-right: 2px; color: #333; }
+            QTabBar::tab:selected { background: #ffffff; border-bottom-color: #ffffff; font-weight: bold; }
+            
+            QLineEdit { border: 1px solid #adb5bd; border-radius: 6px; padding: 5px; background: white; color: black; min-width: 100px; }
+            QLabel { color: #212529; font-weight: bold; }
+            
+            /* Sidebar Styling */
+            QListWidget, QTreeWidget { border: 1px solid #adb5bd; border-radius: 6px; background: white; color: black; margin-bottom: 5px; }
+            QListWidget::item { padding: 8px; border-bottom: 1px solid #eee; }
+            
+            QPushButton { background-color: #e2e5e9; border: 1px solid #adb5bd; border-radius: 4px; padding: 5px 15px; color: #333; min-width: 80px; }
+            QPushButton:hover { background-color: #d1d4d7; }
+            
+            QDockWidget { color: #333; font-weight: bold; }
+            QDockWidget::title { background: #e2e5e9; padding: 6px; border-radius: 4px; }
+        """)
 
-        self.x = 0
-        self.y = 0
-        self.bin_x = 1
-        self.bin_y = 1
-
-        self.start_channel = -1
-        self.end_channel = -2
-
-        self.path = '.'
-        self.setWindowTitle('pycrosGUI version '+str(self.version) +'qt serial #: 1')
-
-        self.add_spectrum = []
-        self.add_si_spectrum = []
-        self.statusBar()
-        self.tabCurrent = 1
-        # ============================================================================
-        # =============== Definition of the Main Window LayOut =======================
-        # ============================================================================
-        # Widget that contains the Plot and toolbar
         central_widget = QtWidgets.QWidget()
-        self.central_widget = central_widget
+        main_layout = QtWidgets.QVBoxLayout(central_widget)
 
-        #============= Definition of Figure and Dialog Windows  for Parameters =================
-
-        self.height = 450
-        screen = QtWidgets.QDesktopWidget().screenGeometry()
-        self.height = screen.height()
-        self.width = screen.width()
-        self.periodic_table = PeriodicTable(self)
-
-        # Switch to using white background and black foreground
-        pg.setConfigOption('background', 'w')
-        pg.setConfigOption('foreground', 'k')
-        # Creating an instance of the Figure
-        self.plot_param_window  = pg.PlotWidget()
-        self.plot_param_window2 = pg.PlotWidget()
-        self.plot_param_window3 = pg.PlotWidget()
-
-        self.plot_param_window.plot((0,1),(0,1))
-
-        plot_layout  = QtWidgets.QVBoxLayout()
-        plot_layout1 = QtWidgets.QVBoxLayout()
-        plot_layout3 = QtWidgets.QVBoxLayout()
+        # --- Tab 1: Spectrum ---
+        self.plot1 = QtWidgets.QWidget()
+        p1_layout = QtWidgets.QVBoxLayout(self.plot1)
+        
+        top_frame = QtWidgets.QFrame()
+        top_frame.setStyleSheet("background-color: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;")
+        grid = QtWidgets.QGridLayout(top_frame)
+        grid.setHorizontalSpacing(25)
 
         validfloat = QtGui.QDoubleValidator()
-        top_layout = QtWidgets.QHBoxLayout()
         self.left_cursor_label = QtWidgets.QLabel("Cursor Start")
-        self.left_cursor_value = QtWidgets.QLineEdit(" 100.0")
+        self.left_cursor_value = QtWidgets.QLineEdit("30.0")
         self.left_cursor_value.setValidator(validfloat)
-        top_layout.addWidget(self.left_cursor_label)
-        top_layout.addWidget(self.left_cursor_value)
+        
         self.right_cursor_label = QtWidgets.QLabel("End")
-        self.right_cursor_value = QtWidgets.QLineEdit(" 100.0")
+        self.right_cursor_value = QtWidgets.QLineEdit("100.0")
         self.right_cursor_value.setValidator(validfloat)
-        top_layout.addWidget(self.right_cursor_label)
-        top_layout.addWidget(self.right_cursor_value)
 
-        top_widget = QtWidgets.QWidget()
-        top_widget.setLayout(top_layout)
-        self.plot1 = QtWidgets.QWidget()
+        grid.addWidget(self.left_cursor_label, 0, 0)
+        grid.addWidget(self.left_cursor_value, 0, 1)
+        grid.addWidget(self.right_cursor_label, 0, 2)
+        grid.addWidget(self.right_cursor_value, 0, 3)
+        grid.setColumnStretch(4, 1)
 
-        plot_layout1.addWidget(top_widget)
-        plot_layout1.addWidget(self.plot_param_window)
-        self.plot1.setLayout(plot_layout1)
+        self.plot_param_window = pg.PlotWidget()
+        pg.setConfigOption('background', 'w')
+        pg.setConfigOption('foreground', 'k')
+        
+        p1_layout.addWidget(top_frame)
+        p1_layout.addWidget(self.plot_param_window)
 
+        # --- Tab 2: Spectral Image ---
         self.plot2 = QtWidgets.QWidget()
-        self.si_layout = QtWidgets.QGridLayout()
-        self.plot2.setLayout(self.si_layout)
-        self.si_layout.setSpacing(0)
-
-        self.si_image_data = np.zeros((2,2))
-        self.si_view= pg.GraphicsView()
+        self.si_layout = QtWidgets.QGridLayout(self.plot2)
+        self.si_view = pg.GraphicsView()
         self.si_img_view = pg.ViewBox()
         self.si_img_view.setAspectLocked()
         self.si_view.setCentralItem(self.si_img_view)
+        self.si_plot = pg.PlotWidget()
         self.si_layout.addWidget(self.si_view, 0, 0)
-
-        self.si_plot= pg.PlotWidget()
         self.si_layout.addWidget(self.si_plot, 0, 1)
 
-        self.si_image = pg.ImageItem(self.si_image_data)
-
-        self.si_img_view.addItem(self.si_image)
-        self.si_img_view.scene().sigMouseClicked.connect(self.mouse_clicked)
-
-        self.si_roi = pg.RectROI([0, 0], [1, 1], pen=(0, 9))
-        self.si_roi.sigRegionChanged.connect(self.update_roi)
-        self.si_img_view.addItem(self.si_roi)
-        self.si_roi.setZValue(10)
-
+        # --- Tab 3: Image ---
         self.plot3 = QtWidgets.QWidget()
-
-        self.title_label =  QtWidgets.QLabel(" ")
+        p3_layout = QtWidgets.QVBoxLayout(self.plot3)
+        self.title_label = QtWidgets.QLabel(" ")
         self.image_item = ImageView()
-        self.img = self.image_item.getImageItem()
-        self.img.hoverEvent = self.imageHoverEvent
-        self.img.mouseClickEvent = self.mouse_clicked_image
-
-        self.image_view = self.image_item.getView()
-        pos = np.array([[0,0]])
-        self.blobs = pg.ScatterPlotItem(pos=pos, pen=None , symbol='o', size=10,
-                                        brush=pg.mkBrush(200,0,0,50), name='atoms')
-        self.blobs.setZValue(100)
-        self.blobs.setVisible(False)
-        self.image_view.addItem(self.blobs)
-
-        self.select_roi = pg.CircleROI(pos=[-.1, -.1], radius=0.1, pen=(0,9), parent=self.img)
-        self.select_roi.isVisible = False
-
-        plot_layout3.addWidget(self.title_label)
-        plot_layout3.addWidget(self.image_item)
-        self.plot3.setLayout(plot_layout3)
+        p3_layout.addWidget(self.title_label)
+        p3_layout.addWidget(self.image_item)
 
         self.tab = QtWidgets.QTabWidget()
         self.tab.addTab(self.plot1, 'Spectrum')
         self.tab.addTab(self.plot2, 'Spectral Image')
         self.tab.addTab(self.plot3, 'Image')
-        self.tab.currentChanged[int].connect(self.updateTab)
-        self.tab.setTabsClosable(True)
-        self.tab.tabCloseRequested.connect(self.onTabClose)
-
-        plot_layout.addWidget(self.tab)
-
-        self.status =  self.statusBar()
-        self.status.showMessage(" No data")
-
-        # Adding the layout to the widget
-        central_widget.setLayout(plot_layout)
-        # Making that Widget the central widget for the window
+        self.tab.currentChanged.connect(self.updateTab)
+        main_layout.addWidget(self.tab)
         self.setCentralWidget(central_widget)
-        #self.tabifiedDockWidgets(central_widget)
 
-        #============= Definition Left QDialog  =================
-        #
-        #        Definition of the Dock Widget:
-        #  that works as a container for the dialog widget
-
-        self.data_widget = QtWidgets.QDockWidget("Datasets ", self)
-        self.data_dialog = DataDialog(self)
+        # --- Sidebars ---
+        self.data_widget = QtWidgets.QDockWidget("Datasets", self)
+        self.data_dialog = DataDialog(self) 
         self.data_widget.setWidget(self.data_dialog)
-        self.data_widget.visibilityChanged.connect(self.update_DataDialog)
-
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.data_widget)
-
-        #============= Definition of Right QDialog  =================
-        #
-        #        Definition of the Dock Widget:
-        #   that works as a container for the dialog widget
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.LeftDockWidgetArea, self.data_widget)
 
         self.select_widget = QtWidgets.QDockWidget("Select", self)
-        # Add the dock to the main window
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.select_widget)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.select_widget)
 
-        #================== File menubar and toolbar ==================
-        # Exit the aplication
+        self._create_menus()
 
-        # exit option for the menu bar File menu
-        self.exit = QtWidgets.QAction('Exit', self)
-        self.exit.setShortcut('Ctrl+Q')
-        # message for the status bar if mouse is over Exit
-        self.exit.setStatusTip('Exit program')
-        # newer connect style (PySide/PyQT 4.5 and higher)
-        self.exit.triggered.connect(self.accept)
-
-        #File
-        open_file = QtWidgets.QAction('Open', self)
-        open_file.setShortcut('Ctrl+O')
-        open_file.setStatusTip('Open File')
-        open_file.triggered.connect(self.open_file)
-
-        # Save File
-        save_file = QtWidgets.QAction('Save', self)
-        save_file.setShortcut('Ctrl+S')
-        save_file.setStatusTip('Save File')
-        save_file.triggered.connect(self.save_file)
-
-        # Show Metadata
-        show_metadata = QtWidgets.QAction('Metadata', self)
-        show_metadata.setShortcut('Ctrl+M')
-        show_metadata.setStatusTip('Show Metadata')
-        show_metadata.triggered.connect(self.show_metadata)
-
-        # Show Metadata
-        original_metadata = QtWidgets.QAction('Original Meta', self)
-        original_metadata.setStatusTip('Show Original Metadata')
-        original_metadata.triggered.connect(self.show_metadata_original)
-
-        # Show Metadata
-        provenance = QtWidgets.QAction('Provenance', self)
-        provenance.setStatusTip('Show provenance of current dataset')
-        provenance.triggered.connect(self.show_provenance)
-
-        self.v_legend = QtWidgets.QAction('Legend', self)
-        self.v_legend.setShortcut('Ctrl+L')
-        self.v_legend.setStatusTip('Switches Legend Display off and on')
-        self.v_legend.setCheckable (True)
-        self.v_legend.setChecked(True)
-        self.v_legend.triggered.connect(self.switchLegend)
-
-        #-------------------- MenuBar --------------------
-        # add actions to the menu bar
+    def _create_menus(self):
         menubar = self.menuBar()
-        File = menubar.addMenu('&File')
-
-        File.addAction(open_file)
-        File.addAction(save_file)
-        File.addSeparator()
-
-        File.addAction(show_metadata)
-        File.addAction(original_metadata)
-        File.addAction(provenance)
-        File.addAction(self.exit)
-
-        view = self.menuBar().addMenu("&View")
-        view.addSeparator()
-        view.addAction(self.v_legend)
-
-        self.help_menu = self.menuBar().addMenu("&Help")
-
-        about_action = self.create_action("&About",
-            shortcut='F1', slot=self.on_about,
-            tip='About pycrosGUI')
-
-        self.add_actions(self.help_menu, (about_action,))
-        self.view = view
-
-    def add_sidebar(self, dialog):
-        """Add a sidebar for the given dialog."""
-        dialogWidget = QtWidgets.QDockWidget(dialog.name, self)
-
-        dialogWidget.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable |
-                                 QtWidgets.QDockWidget.DockWidgetFloatable)
-        dialogWidget.setWidget(dialog)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dialogWidget)
-
-        return dialogWidget
-
-    def imageHoverEvent(self, event):
-        """Show the position, pixel, and value under the mouse cursor."""
-        if event.isExit():
-            self.setTitle("")
-            return
-        pos = event.pos()
-        data = self.img.image
-        i, j = pos.x(), pos.y()
-        i = int(np.clip(i, 0, data.shape[0] - 1))
-        j = int(np.clip(j, 0, data.shape[1] - 1))
-        val = data[i, j]
-        ppos = self.img.mapToParent(pos)
-        x = ppos.x()
-        units = self.dataset.x.units
-        self.setTitle(f"pos: ({x:0.1f}, {x:0.1f}){units} - pixel: ({i:d}, {j:d})  value: {val:3g}")
-
-    def mouse_clicked_image(self, mouseClickEvent):
-        """Handle mouse click events on the image."""
-        pos = mouseClickEvent.pos()
-        self.x_pixel = int(np.clip(pos.x(), 0, self.img.image.shape[0] - 1))
-        self.y_pixel = int(np.clip(pos.y(), 0, self.img.image.shape[1] - 1))
-
-    def setTitle(self, title=None, **args):
-        """
-        Set the title of the plot. Basic HTML formatting is allowed.
-        If title is None, then the title will be hidden.
-        """
-        if title is None:
-            self.title_label.setVisible(False)
-        else:
-            self.title_label.setVisible(True)
-            self.title_label.setText(title, **args)
-
-    def show_metadata_original(self):
-        """Show the original metadata."""
-        self.show_dictionary(self.dataset.original_metadata,
-                             name= 'Original Metadata - ')
-
-    def show_metadata(self):
-        """Show the metadata."""
-        self.show_dictionary(self.dataset.metadata,
-                             name='Metadata')
-    
-    def show_provenance(self):
-        """Show the provenance."""
-        self.show_dictionary(self.dataset.provenance,
-                             name='Provenance')
-
-    def show_dictionary(self, metadata, name=''):
-        """Show a dictionary in a dialog."""
-        dialog = QtWidgets.QDialog(self)
-        dialog.setWindowTitle(name + " - " + self.dataset.title)
-        dialog.resize(400, 300)
-
-        tree = QtWidgets.QTreeWidget(dialog)
-        tree.setHeaderLabels(["Key", "Value"])
-        tree.setColumnWidth(0, 150)
-        tree.setGeometry(10, 10, 380, 280)
-
-        def populate_tree(parent, data):
-            for key, value in data.items():
-                if isinstance(value, dict):
-                    item = QtWidgets.QTreeWidgetItem([str(key)])
-                    parent.addChild(item)
-                    populate_tree(item, value)
-                else:
-                    item = QtWidgets.QTreeWidgetItem([str(key), str(value)])
-                    parent.addChild(item)
-
-        root = QtWidgets.QTreeWidgetItem(["Metadata - "])
-        tree.addTopLevelItem(root)
-        populate_tree(root, metadata)
-        tree.expandAll()
-
-        dialog.exec_()
-
-    def mouse_clicked(self, mouseClickEvent):
-        """Handle mouse click events on the image."""
-        if self.tabCurrent != 1:
-            return
-        point = self.si_img_view.mapSceneToView(mouseClickEvent.scenePos())
-        x = point.x()
-        y = point.y()
-        if x>-0.5 and x+0.5<self.si_image_data.shape[0]:
-            x = int(x+0.5)    
-        else: 
-            return
-        if y>-0.5 and y+0.5<self.si_image_data.shape[1]:
-            y = int(y+0.5)
-        else: 
-            return
-        modifiers = QtWidgets.QApplication.keyboardModifiers()
-        if modifiers == QtCore.Qt.ShiftModifier:
-            self.add_si_spectrum.append([x, y])
-        elif modifiers == QtCore.Qt.ControlModifier:
-            self.add_si_spectrum = []
-            self.x = x
-            self.y = y
-        else:
-            self.x = x
-            self.y = y
-        self.plot_update()
-
-    def add_image_dataset(self, key, name, dataset, data_type='IMAGE'):
-        """Add an image dataset."""
-        self.datasets[key] = dataset
-        self.datasets['_relationship'][key] = key
-        self.datasets[key].data_type = data_type
-        self.datasets[key].title = name
-        self.datasets['_relationship']['image'] = key
-        self.update_sidebar()
-
-    def update_sidebar(self):
-        """Update the sidebar to reflect the current dataset."""
-        for dock_widget in self.findChildren(QtWidgets.QDockWidget):
-            if hasattr(dock_widget.widget(), 'update_sidebar'):
-                if dock_widget.isVisible():
-                    dock_widget.widget().update_sidebar()
-
-    def update_roi(self,roi):
-        """Update the region of interest (ROI)."""
-        pass
-
-    def onTabClose(self,index):
-        """Handle tab close events."""
-        if index>2:
-            self.tab.removeTab(index)
-        else:
-            self.tab.hideTab(index)
-
-    def updateTab(self,num):
-        """Update the current tab."""
-        self.tabCurrent = num
-        # print('tab' ,num)
-
-    def accept(self):
-        """Close the dialog."""
-        self.close()
-
-    def switchLegend(self):
-        """Switch the visibility of the legend."""
-        if self.v_legend.isChecked():
-            self.show = True
-        else:
-            self.show = False
-
-    def on_about(self):
-        """Show information about the application."""
-        msg = f"pycrosGUI version {self.version}qt \n part of "
-        msg += "the pycrosocpy ecosystem\n by Gerd Duscher 2025"
-        QtWidgets.QMessageBox.about(self, "About pycrosGUI", msg)
-
-    def add_actions(self, target, actions):
-        """Add a list of actions to a target."""
-        for action in actions:
-            if action is None:
-                target.addSeparator()
-            else:
-                target.addAction(action)
-
-    def create_action(self, text, slot=None, shortcut=None,
-                      icon=None, tip=None, checkable=False,
-                      signal="triggered()"):
-        """Create a new action."""
-        action = QtWidgets.QAction(text, self)
-        if icon is not None:
-            action.setIcon(QtWidgets.QIcon(":/%s.png" % icon))
-        if shortcut is not None:
-            action.setShortcut(shortcut)
-        if tip is not None:
-            action.setToolTip(tip)
-            action.setStatusTip(tip)
-        if slot is not None:
-            #self.connect(action, SIGNAL(signal), slot)
-            action.triggered.connect(slot)
-
-        if checkable:
-            action.setCheckable(True)
-        return action
-
-    def keyPressEvent(self, event):
-        """Handle key press events."""
-        key = event.key()
-        if not isinstance(self.dataset, sidpy.Dataset):
-            return
-        if 'SPECTRAL' in self.dataset.data_type.name:
-            if key == 16777234:
-                self.x-=1
-                if self.x<0:
-                    self.x=0
-            elif key == 16777236:
-                self.x+=1
-                if self.x > self.dataset.shape[0]-1:
-                    self.x = self.dataset.shape[0]-1
-            elif key == 16777237:
-                self.y -= 1
-                if self.y < 0:
-                    self.y = 0
-            elif key == 16777235:
-                self.y += 1
-                if self.y > self.dataset.shape[1]-1:
-                    self.y = self.dataset.shape[1]-1
-            elif key == 16777232:
-                self.x = 0
-                self.y = 0
-            self.plot_update()
-
-    def get_additional_metadata(self):
-        """Retrieve additional metadata from the dataset. Not Implemented"""
-        print('get additional metadata')
+        file_menu = menubar.addMenu('&File')
+        file_menu.addAction(QtWidgets.QAction('Open', self, shortcut='Ctrl+O', triggered=self.open_file))
+        file_menu.addAction(QtWidgets.QAction('Save', self, shortcut='Ctrl+S', triggered=self.save_file))
         
+        window_menu = menubar.addMenu('&Windows')
+        window_menu.addAction(QtWidgets.QAction('Restore Sidebars', self, triggered=self.restore_sidebars))
+
+    def restore_sidebars(self):
+        self.data_widget.show()
+        self.select_widget.show()
+
+    def remove_dataset(self):
+        """Action for the 'Remove' button in the sidebar."""
+        if self.main in self.datasets:
+            del self.datasets[self.main]
+            self.main = ""
+            self.update_DataDialog()
+            self.status_msg("Dataset Removed")
+
     def open_file(self, filename=None):
-        """Open a file."""
         path = pyTEMlib.file_tools.get_last_path()
-        file_types = 'TEM files (*.dm3 *.dm4 *.ndata *.h5 *.hf5 *.emd);;' + \
-                     'EDS files (*.rto *.spc *.spx *.emd);;' + \
-                     'DM files (*.dm3 *.dm4);;Thermo files (*.emd *.mrc);;' + \
-                     'Nion files (*.ndata *.h5);;' + \
-                     'All files (*)'
-        filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Select a file...",
-                                                            path, filter=file_types)
-    
-        self.main = pyTEMlib.file_tools.add_dataset_from_file(self.datasets, filename,
-                                                              'Channel',
-                                                              single_dataset=False)
-        
-        self.status.showMessage("opened" + list(self.datasets.keys())[0])
-        self.main = list(self.datasets.keys())[0]
-        self.set_dataset()
-        print(self.datasets.keys())
-        if '_relationship' not in self.datasets:
-            self.datasets['_relationship'] = {}
-        else:
-            print(self.datasets['_relationship'].keys())
-        self.update_DataDialog()
-
-    def update_DataDialog(self):
-        """Update the data dialog with the current dataset information."""
-        for key in self.datasets.keys():
-            if isinstance(self.datasets[key], sidpy.Dataset):
-                if 'filename' in self.datasets[key].metadata:
-                    path, file_name = os.path.split(self.datasets[key].metadata['filename'])
-                    basename, extension = os.path.splitext(file_name)
-                else:
-                    basename = ""
-                if 'SPECT' in self.datasets[key].data_type.name:
-                    self.status.showMessage("opened spectrum " + list(self.datasets.keys())[0])
-                    
-                    if len(self.data_dialog.spectrum_list.findItems('None', QtCore.Qt.MatchExactly))>0:
-                        self.data_dialog.spectrum_list.clear()
-                    if len(self.data_dialog.spectrum_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
-                        self.data_dialog.spectrum_list.addItems([f'{key}: {self.datasets[key].title:20} - {basename[:20]}'])
-                elif 'IMAGE_STACK' == self.datasets[key].data_type.name: 
-                    self.status.showMessage("opened image stack " + list(self.datasets.keys())[0])
-                    if len(self.data_dialog.image_list.findItems('None', QtCore.Qt.MatchExactly))>0:
-                        self.data_dialog.image_list.clear()  
-                    if len(self.data_dialog.image_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
-                        self.data_dialog.image_list.addItem(f'{key}: {self.datasets[key].title:20} - {basename[:20]}')
-                elif 'IMAGE' in self.datasets[key].data_type.name:
-                    if 'survey' in self.datasets[key].title.lower():
-                        if len(self.data_dialog.survey_list.findItems('None', QtCore.Qt.MatchExactly))>0:
-                            self.data_dialog.survey_list.clear()  
-                        if len(self.data_dialog.survey_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
-                            self.data_dialog.survey_list.addItem(f'{key}: {self.datasets[key].title} - {basename[:20]}')
-                    else:
-                        if len(self.data_dialog.image_list.findItems('None', QtCore.Qt.MatchExactly))>0:
-                            self.data_dialog.image_list.clear()  
-                        if len(self.data_dialog.image_list.findItems(key, QtCore.Qt.MatchStartsWith))==0:
-                            self.data_dialog.image_list.addItem(f'{key}: {self.datasets[key].title}')
-            else:
-                if '_' != key[0]:
-                    print('Did not recognize file type: ', f'{key}')
-        self.setWindowTitle('PyCrosGUI version '+str(1) +' serial #: 1 - ')# +tags['filename'])
+        if not filename:
+            filename, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Open File", path)
+        if filename:
+            self.main = pyTEMlib.file_tools.add_dataset_from_file(self.datasets, filename, 'Channel')
+            self.update_DataDialog()
 
     def save_file(self, filename=None):
-        """Save the current dataset to a file."""
-        default_filename = self.datasets[self.main].title+'.hf5'
-        default_dir = pyTEMlib.file_tools.get_last_path()
-        file_name, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save pycroscopy file",
-                                                  default_filename, "nsid Files (*.hf5)")
-        h5_group = pyTEMlib.file_tools.save_dataset(self.datasets, file_name)
-        h5_group.file.close()
-        self.status.showMessage(' File saved')
+        if not self.main: return
+        file_name, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save File", filter="nsid Files (*.hf5)")
+        if file_name:
+            h5 = pyTEMlib.file_tools.save_dataset(self.datasets, file_name)
+            h5.file.close()
+            self.status_msg("File Saved")
 
-    def set_dataset(self):
-        """Set the current dataset."""
-        if isinstance(self.dataset, sidpy.Dataset):
-            if 'plot' not in self.dataset.metadata:
-                self.dataset.metadata['plot'] = {}
-            if 'SPECTRAL' in self.dataset.data_type.name:
-                self.dataset.metadata['plot']['x'] = self.x
-                self.dataset.metadata['plot']['y'] = self.y
-            if 'SPECTRUM' in self.dataset.data_type.name:
-                self.dataset.metadata['plot']['x'] = 0
-                self.dataset.metadata['plot']['y'] = 0
-            if 'experiment' not in self.dataset.metadata:
-                self.dataset.metadata['experiment'] = {}
-        if self.main in self.datasets:
-            self.dataset = self.datasets[self.main]
-            self.status.showMessage("switched to " + list(self.datasets.keys())[0])
-            if 'plot' not in self.dataset.metadata:
-                self.dataset.metadata['plot'] = {}
-            if 'x' in self.dataset.metadata['plot']:
-                self.x = self.dataset.metadata['plot']['x']
-                self.y = self.dataset.metadata['plot']['y']
-            else:
-                self.x = 0
-                self.y = 0
+    def status_msg(self, text):
+        self.statusBar().showMessage(text)
 
-    def plot_update(self,key = 'All'):
-        """Update the plot with the current dataset information."""
-        if self.main == "":
-            return
-        self.plot_features = {}
-        self.dataset = self.datasets[self.main]
-        if not isinstance(self.dataset, sidpy.Dataset):
-            return
+    def updateTab(self, num):
+        self.tabCurrent = num
 
-        if 'SPECT' in self.dataset.data_type.name:
-            if 'SPECTRAL' in self.datasets[self.main].data_type.name:
-                self.si_image_data = np.array(self.datasets[self.main]).sum(axis=2)
-                self.si_image.setImage(self.si_image_data)
-                plt= self.si_plot
-                self.si_roi.setPos(self.x,self.y)
-            else:
-                plt = self.plot_param_window
-                if self.cursor is None:
-                    cursor_values = None
-                else:
-                    cursor_values = self.cursor.getRegion()
-            plt.clear()
-            spectrum, label =self.get_spectrum(self.main)
-            ene = np.array(self.dataset.get_spectral_dims(return_axis=True)[0])
-            energy_scale = np.append(ene, ene[-1])
-            curve = pg.PlotCurveItem(np.array(energy_scale), spectrum,
-                                        stepMode=True, fillLevel=0,
-                                        pen = 'blue',  brush=(0,0,255,30), fillBrush=(0,0,255,30),
-                                        name=label)
-            curve.setPen(pg.mkPen('blue', width=2))
+    def update_DataDialog(self):
+        if hasattr(self.data_dialog, 'update_sidebar'):
+            self.data_dialog.update_sidebar()
 
-            plt.addItem(curve)
-            plt.addLine(y=0, pen='gray')
-            plt.setWindowTitle(f'PycrosGUI {self.version}')
-            if self.intensity_scale == 1.0:
-                plt.setLabel('left', 'intensity', units='counts')
-            else:
-                plt.setLabel('left', 'scattering probability', units='ppm')
-            plt.setLabel('bottom', 'energy_loss', units='eV')
-
-            plt.addLegend()
-
-            colors = ('red', 'green', 'orange', 'purple', 'cyan', 'magenta',
-                      'grey', 'lightgrey', 'black','black')
-            for i, pos in enumerate(self.add_si_spectrum):
-                spectrum, label = self.get_spectrum(pos)
-                curve = pg.PlotCurveItem(np.array(energy_scale), spectrum,
-                                            pen = colors[i%10], stepMode=True,
-                                            padding = 0, name=label)
-                plt.addItem(curve)
-
-            self.plot_additional_features(plt)
-
-            if 'SPECTRAL' in self.datasets[self.main].data_type.name:
-                self.tab.setCurrentWidget(self.plot2)
-            else:
-                if cursor_values == None:
-                    cursor_values = (energy_scale[10], energy_scale[90])
-                self.cursor = pg.LinearRegionItem(values=cursor_values,
-                                                orientation='vertical')
-                self.cursor.sigRegionChangeFinished.connect(self.set_cursor_values)
-                plt.addItem(self.cursor)
-                self.tab.setCurrentWidget(self.plot1)
-        elif 'IMAGE' in self.datasets[self.main].data_type.name:
-
-            if 'IMAGE_STACK' in self.datasets[self.main].data_type.name:
-                dims = self.dataset.get_dimensions_by_type(sidpy.DimensionType.TEMPORAL, return_axis=True)
-                if len(dims)>1:
-                    print('old dm3 dataset')
-                    data_set = sidpy.Dataset.from_array(np.swapaxes(np.array(self.dataset),2, 0), 'stack')
-                    data_set.set_dimension(0, sidpy.Dimension(np.arange(data_set.shape[0]),
-                                                              'z', units='frame', quantity='frame',
-                                                              dimension_type='temporal'))
-                    data_set.set_dimension(1, sidpy.Dimension(np.arange(data_set.shape[1]),
-                                                              name='x', units='nm', quantity='Length',
-                                                              dimension_type='spatial'))
-                    data_set.set_dimension(2, sidpy.Dimension(np.arange(data_set.shape[2]),
-                                                              'y', units='nm', quantity='Length',
-                                                              dimension_type='spatial'))
-                    data_set.data_type = 'image_stack'
-                    data_set.metadata['experiment'] = {'acceleration_voltage': 200000,
-                                                       'convergence_angle': 30,
-                                                       'collection_angle': 50}
-                    data_set.title = self.dataset.title
-                    self.dataset = data_set
-                    dims = [data_set.z]
-                self.image_item.setImage(np.array(self.dataset), xvals=dims[0].values)
-            else:
-                self.image_item.setImage(np.array(self.dataset))
-
-            self.img = self.image_item.getImageItem()
-            self.view = self.image_item.getView()
-            self.histo = self.image_item.ui.histogram
-            self.view.setAspectLocked(lock=True, ratio=1)
-            dims = self.dataset.get_dimensions_by_type(sidpy.DimensionType.SPATIAL, return_axis=True)
-            if len(dims) <1:
-                dims  = self.dataset.get_dimensions_by_type(sidpy.DimensionType.RECIPROCAL, return_axis=True)
-            if len(dims) <1:
-                return
-            x =dims[0]
-            y =dims[1]
-
-            tr = QtGui.QTransform()  # prepare ImageItem transformation:
-            tr.scale(x[1]-x[0], y[1]-y[0])       # scale horizontal and vertical axes
-            self.img.setTransform(tr) 
-            self.img.setRect(x[0], y[0], x[-1]-x[0], y[-1]-y[0])
-            # self.roi = self.plot_param_window3.getRoiPlot()
-
-            # self.plot_param_window3.roi.setSize((2.000000, 2.000000))
-
-            scale = pg.ScaleBar(size=10, pen = 'w', suffix = x.units)
-            scale.setParentItem(self.view)
-            scale.anchor((1, 1), (1, 1), offset=(-20, -20))
-
-            self.plot_additional_features(self.view)
-            self.view.setRange(xRange=[x[0], x[-1]], yRange=[y[0], y[-1]], padding=0)
-            
-            """# self.plot_param_window3.autoRange()
-
-            print('new)')
-            child_item = self.view.allChildItems()
-            for item in child_item:
-                print(item)
-            print(self.view.allChildren())
-            childs = self.view.allChildren()
-            for child in childs:
-                print(child)
-            """
-            self.tab.setCurrentWidget(self.plot3)
-
-    def plot_additional_features(self, plt):
-        """
-        EMPTY: to be extended by the child classes
-        """
+    def imageHoverEvent(self, event):
         pass
 
-    def get_spectrum(self, key=None):
-        """Get the spectrum data for the given key."""
-        if key is None:
-            key = self.main
+    def mouse_clicked_image(self, event):
+        pass
 
-        if isinstance(key, list):
-            x = key[0]
-            y = key[1]
-            key = self.main
-        else:
-            x = self.x
-            y = self.y
-
-        if isinstance(self.datasets[key], sidpy.Dataset):
-            if self.datasets[key].data_type == sidpy.DataType.SPECTRUM:
-                spectrum = np.array(self.datasets[key])
-                label = self.datasets[key].title
-            else:
-                image_dims = self.datasets[key].get_dimensions_by_type(sidpy.DimensionType.SPATIAL)
-                selection = []
-                bin_x = self.bin_x
-                bin_y = self.bin_y
-
-                for dim, axis in self.datasets[key]._axes.items():
-                    # print(dim, axis.dimension_type)
-                    if axis.dimension_type == sidpy.DimensionType.SPATIAL:
-                        if dim == image_dims[0]:
-                            selection.append(slice(x, x + bin_x))
-                        else:
-                            selection.append(slice(y, y + bin_y))
-
-                    elif axis.dimension_type == sidpy.DimensionType.SPECTRAL:
-                        selection.append(slice(None))
-                    elif axis.dimension_type == sidpy.DimensionType.CHANNEL:
-                        selection.append(slice(None))
-                    else:
-                        selection.append(slice(0, 1))
-                spectrum = np.array(self.datasets[key][tuple(selection)].mean(axis=tuple(image_dims)))
-                label = f" {self.datasets[key].title} {x}, {y}"
-        else:
-            spectrum = np.dtype(self.datasets[key], 'float64')
-            label = key
-        spectrum = spectrum *self.intensity_scale
-        return spectrum.squeeze(), label
-
-    def get_spectrum_dataset(self, key=None):
-        """Get the spectrum dataset for the given key."""
-        if self.dataset.data_type.name == 'SPECTRUM':
-            return  self.dataset
-        else:
-            spectrum, label = self.get_spectrum(key) 
-            spectrum = self.dataset[0, 0].like_data(spectrum)
-            spectrum.data_type = 'spectrum'
-            spectrum.title = label
-            return spectrum
-
-    def set_cursor_values(self):
-        """Set the cursor values in the UI."""
-        values = self.cursor.getRegion()
-        self.left_cursor_value.setText(f'{values[0]:.3f}')
-        self.right_cursor_value.setText(f'{values[1]:.3f}')
+if __name__ == "__main__":
+    app = QtWidgets.QApplication(sys.argv)
+    window = BaseWidget()
+    window.resize(1240, 800)
+    window.show()
+    sys.exit(app.exec())

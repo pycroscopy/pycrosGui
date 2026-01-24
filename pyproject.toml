@@ -36,8 +36,8 @@ requires-python = ">=3.10"
 dependencies = [
     "pyTEMlib",
     "pyqt5",
-    "pyqtgraph"
-    "pytest"
+    "pyqtgraph",
+    "pytest",
     "pytest-runner"
 ]
 
