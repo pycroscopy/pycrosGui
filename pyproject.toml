@@ -48,6 +48,7 @@ Homepage = "https://pycroscopy.github.io/pycrosGUI/about.html"
 [project.optional-dependencies]
 test = [
     "pytest",
+    "pytest-cov",
     "pytest-runner"
 ]
 
@@ -57,3 +58,14 @@ packages = ["pycrosGUI"]
 
 [project.scripts]
 pycrosGUI = "pycrosGUI:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--verbose --tb=short"
+markers = [
+    "integration: Integration tests",
+    "slow: Slow running tests",
+]
