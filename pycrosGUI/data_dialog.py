@@ -5,8 +5,15 @@
 #####################################################################
 """
 
-from PyQt5 import QtWidgets
-from PyQt5 import QtCore
+try:
+    from PyQt6 import QtWidgets, QtCore
+    ShiftModifier = QtCore.Qt.KeyboardModifier.ShiftModifier
+    ControlModifier = QtCore.Qt.KeyboardModifier.ControlModifier
+except ImportError:
+    from PyQt5 import QtWidgets
+    from PyQt5 import QtCore
+    ShiftModifier = QtCore.Qt.ShiftModifier
+    ControlModifier = QtCore.Qt.ControlModifier
 
 class DataDialog(QtWidgets.QWidget):
     """Data dialog for displaying and managing data."""
@@ -119,12 +126,12 @@ class DataDialog(QtWidgets.QWidget):
         if self.parent.dataset is not None:
             if self.parent.dataset.data_type.name == 'SPECTRUM':
 
-                if modifiers == QtCore.Qt.ShiftModifier:
+                if modifiers == ShiftModifier:
                     self.parent.add_spectrum.append(item.text().split(':')[0])
                     self.parent.plot_update()
                     return
 
-        if modifiers == QtCore.Qt.ControlModifier:
+        if modifiers == ControlModifier:
             del self.parent.datasets[item.text().split(':')[0]]
 
             row = list_widget.row(item)-1

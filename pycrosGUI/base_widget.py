@@ -23,6 +23,15 @@ import pyqtgraph as pg
 # Repository-specific imports
 from .periodic_table import PeriodicTable
 from .data_dialog import DataDialog
+from .calculator_dialog import CalculatorDialog
+from .info_dialog import InfoDialog
+from .low_loss_dialog import LowLossDialog
+from .core_loss_dialog import CoreLossDialog
+from .eds_dialog import EDSDialog
+from .peak_fit_dialog import PeakFitDialog
+from .image_dialog import ImageDialog
+from .atom_dialog import AtomDialog
+from .probe_dialog import ProbeDialog
 
 # Full 118 Element Data 
 ELEMENT_DATA = {
@@ -103,8 +112,9 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.version = '2025-1-1'
         
         # KEY REPOSITORY FIXES
-        self.dataset = {} 
+        self.dataset = None 
         self.datasets = {}
+        self.add_spectrum = []
         
         self.main = ""
         self.tabCurrent = 1
@@ -112,7 +122,218 @@ class BaseWidget(QtWidgets.QMainWindow):
         self.dir_name = os.getcwd()
         
         self._init_ui()
+        self._init_menus()
+        self._init_dialogs()
         self._connect_pt_buttons()
+
+    def _init_menus(self):
+        """Initialize menu bar with File and View menus."""
+        menubar = self.menuBar()
+        
+        # File menu
+        self.file_menu = menubar.addMenu('File')
+        
+        open_action = QtWidgets.QAction('Open', self)
+        open_action.setShortcut('Ctrl+O')
+        open_action.triggered.connect(self.open_file)
+        self.file_menu.addAction(open_action)
+        
+        save_action = QtWidgets.QAction('Save', self)
+        save_action.setShortcut('Ctrl+S')
+        save_action.triggered.connect(self.save_file)
+        self.file_menu.addAction(save_action)
+        
+        self.file_menu.addSeparator()
+        
+        exit_action = QtWidgets.QAction('Exit', self)
+        exit_action.setShortcut('Ctrl+Q')
+        exit_action.triggered.connect(self.close)
+        self.file_menu.addAction(exit_action)
+        
+        # View menu
+        self.view = menubar.addMenu('View')
+        
+        # Data toggle
+        self.data_visible = QtWidgets.QAction('Data', self, checkable=True)
+        self.data_visible.setChecked(True)
+        self.data_visible.toggled.connect(lambda checked: self.data_widget.setVisible(checked))
+        self.view.addAction(self.data_visible)
+        
+        # PT toggle
+        self.pt_visible = QtWidgets.QAction('Periodic Table', self, checkable=True)
+        self.pt_visible.setChecked(True)
+        self.pt_visible.toggled.connect(lambda checked: self.periodic_widget.setVisible(checked))
+        self.view.addAction(self.pt_visible)
+        
+        # Calculator toggle
+        self.calc_visible = QtWidgets.QAction('Calculator', self, checkable=True)
+        self.calc_visible.setChecked(True)
+        self.calc_visible.toggled.connect(lambda checked: self.calculator_widget.setVisible(checked))
+        self.view.addAction(self.calc_visible)
+        
+        self.view.addSeparator()
+        
+        # Image group toggle
+        self.image_visible = QtWidgets.QAction('Image', self, checkable=True)
+        self.image_visible.setShortcut('Ctrl+I')
+        self.image_visible.setStatusTip('Toggle image dialogs visibility')
+        self.image_visible.toggled.connect(self.visible_image)
+        self.view.addAction(self.image_visible)
+        
+        # EELS group toggle
+        self.eels_visible = QtWidgets.QAction('EELS', self, checkable=True)
+        self.eels_visible.setShortcut('Ctrl+E')
+        self.eels_visible.setStatusTip('Toggle EELS dialogs visibility')
+        self.eels_visible.toggled.connect(self.visible_eels)
+        self.view.addAction(self.eels_visible)
+        
+        # EDS toggle
+        self.eds_visible = QtWidgets.QAction('EDS', self, checkable=True)
+        self.eds_visible.setShortcut('Ctrl+X')
+        self.eds_visible.setStatusTip('Toggle EDS dialogs visibility')
+        self.eds_visible.toggled.connect(self.visible_eds)
+        self.view.addAction(self.eds_visible)
+
+    def _init_dialogs(self):
+        """Initialize all analysis dialogs."""
+        # Info dialog
+        self.info_dialog = InfoDialog(self)
+        self.info_widget = self.add_sidebar(self.info_dialog, "Info")
+        
+        # Low Loss EELS dialog
+        self.low_loss_dialog = LowLossDialog(self)
+        self.low_loss_widget = self.add_sidebar(self.low_loss_dialog, "LowLoss")
+        
+        # Core Loss EELS dialog
+        self.core_loss_dialog = CoreLossDialog(self)
+        self.core_loss_widget = self.add_sidebar(self.core_loss_dialog, "CoreLoss")
+        
+        # EDS dialog
+        self.eds_dialog = EDSDialog(self)
+        self.eds_widget = self.add_sidebar(self.eds_dialog, "EDS")
+        
+        # Peak Fit dialog
+        self.peak_fit_dialog = PeakFitDialog(self)
+        self.peak_fit_widget = self.add_sidebar(self.peak_fit_dialog, "PeakFit")
+        
+        # Image dialog
+        self.image_dialog = ImageDialog(self)
+        self.image_widget = self.add_sidebar(self.image_dialog, "Image")
+        
+        # Atom dialog
+        self.atom_dialog = AtomDialog(self)
+        self.atom_widget = self.add_sidebar(self.atom_dialog, "Atoms")
+        
+        # Probe dialog
+        self.probe_dialog = ProbeDialog(self)
+        self.probe_widget = self.add_sidebar(self.probe_dialog, "Probe")
+        
+        # Tabify dialogs on the left side
+        self.tabifyDockWidget(self.data_widget, self.info_widget)
+        self.tabifyDockWidget(self.info_widget, self.low_loss_widget)
+        self.tabifyDockWidget(self.low_loss_widget, self.core_loss_widget)
+        self.tabifyDockWidget(self.core_loss_widget, self.peak_fit_widget)
+        self.tabifyDockWidget(self.peak_fit_widget, self.eds_widget)
+        self.tabifyDockWidget(self.eds_widget, self.image_widget)
+        self.tabifyDockWidget(self.image_widget, self.atom_widget)
+        self.tabifyDockWidget(self.atom_widget, self.probe_widget)
+        
+        # Connect visibility to updates
+        self.info_widget.visibilityChanged.connect(self.info_update)
+        self.low_loss_widget.visibilityChanged.connect(self.low_loss_update)
+        self.core_loss_widget.visibilityChanged.connect(self.core_loss_update)
+        self.eds_widget.visibilityChanged.connect(self.eds_update)
+        self.peak_fit_widget.visibilityChanged.connect(self.peak_fit_update)
+        self.image_widget.visibilityChanged.connect(self.image_update)
+        self.atom_widget.visibilityChanged.connect(self.atom_update)
+        self.probe_widget.visibilityChanged.connect(self.probe_update)
+        
+        # Initially hide some dialogs
+        self.low_loss_widget.setVisible(False)
+        self.core_loss_widget.setVisible(False)
+        self.eds_widget.setVisible(False)
+        self.peak_fit_widget.setVisible(False)
+        self.image_widget.setVisible(False)
+        self.atom_widget.setVisible(False)
+        self.probe_widget.setVisible(False)
+        
+        # Raise data widget to front
+        self.data_widget.raise_()
+
+    def visible_eels(self, checked):
+        """Toggle the visibility of the EELS widgets."""
+        self.low_loss_widget.setVisible(checked)
+        self.core_loss_widget.setVisible(checked)
+        self.peak_fit_widget.setVisible(checked)
+
+    def visible_eds(self, checked):
+        """Toggle the visibility of the EDS widgets."""
+        self.eds_widget.setVisible(checked)
+
+    def visible_image(self, checked):
+        """Toggle the visibility of the image widgets."""
+        self.image_widget.setVisible(checked)
+        self.atom_widget.setVisible(checked)
+        self.probe_widget.setVisible(checked)
+
+    def info_update(self, visible):
+        """Update the Info dialog when it becomes visible."""
+        if visible:
+            self.info_dialog.update_info()
+
+    def low_loss_update(self, visible):
+        """Update the Low Loss dialog."""
+        if visible:
+            self.low_loss_dialog.update_ll_sidebar()
+
+    def core_loss_update(self, visible):
+        """Update the Core Loss dialog."""
+        if visible:
+            self.core_loss_dialog.update_cl_sidebar()
+
+    def eds_update(self, visible):
+        """Update the EDS dialog."""
+        if visible:
+            self.eds_dialog.update_sidebar()
+
+    def peak_fit_update(self, visible):
+        """Update the Peak Fit dialog."""
+        if visible:
+            self.peak_fit_dialog.update_peak_sidebar()
+
+    def image_update(self, visible):
+        """Update the Image dialog."""
+        if visible:
+            self.image_dialog.update_sidebar()
+
+    def atom_update(self, visible):
+        """Update the Atom dialog."""
+        if visible:
+            self.atom_dialog.update_sidebar()
+
+    def probe_update(self, visible):
+        """Update the Probe dialog."""
+        if visible:
+            self.probe_dialog.update_sidebar()
+
+    def set_dataset(self):
+        """Set the current dataset for the widget."""
+        if self.main in self.datasets:
+            self.dataset = self.datasets[self.main]
+
+    def plot_update(self):
+        """Update the plot based on current dataset."""
+        pass
+
+    def plot_additional_features(self, plt):
+        """Adds additional features to the plot, as defined in the dialogs."""
+        pass
+
+    def show_metadata(self):
+        """Show metadata dialog."""
+        if self.dataset is not None:
+            # Show metadata in a dialog
+            pass
 
     def _init_ui(self):
         self.setWindowTitle(f'pycrosGUI v{self.version}')
@@ -157,31 +378,73 @@ class BaseWidget(QtWidgets.QMainWindow):
             self.data_dialog, "Data", QtCore.Qt.DockWidgetArea.LeftDockWidgetArea
         )
 
-        # Sidebar 2: PT (Right)
-        right_container = QtWidgets.QWidget()
-        rl = QtWidgets.QVBoxLayout(right_container)
-        rl.setContentsMargins(2, 2, 2, 2)
-        rl.setSpacing(5)
+        # Sidebar 2: PT (Right) - Modern periodic table in its own dock
+        self.periodic_widget = QtWidgets.QDockWidget("Periodic Table", self)
+        pt_container = QtWidgets.QWidget()
+        pt_layout = QtWidgets.QVBoxLayout(pt_container)
+        pt_layout.setContentsMargins(5, 5, 5, 5)
+        pt_layout.setSpacing(5)
         
-        self.periodic_table.setMinimumSize(450, 280)
-        rl.addWidget(self.periodic_table)
+        # Open periodic table button for popup
+        pt_button = QtWidgets.QPushButton("Open Full Periodic Table")
+        pt_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+        """)
+        pt_button.clicked.connect(self.show_periodic_table)
+        pt_layout.addWidget(pt_button)
         
-        rl.addWidget(QtWidgets.QLabel("ELEMENT INFO:"))
+        pt_layout.addWidget(QtWidgets.QLabel("ELEMENT INFO:"))
         self.info_box = QtWidgets.QTextEdit()
         self.info_box.setReadOnly(True)
-        self.info_box.setMaximumHeight(80)
-        rl.addWidget(self.info_box)
-
-        rl.addWidget(QtWidgets.QLabel("TEM CALCULATOR:"))
-        self.calc_input = QtWidgets.QLineEdit()
-        self.calc_input.setPlaceholderText("Enter formula...")
-        self.calc_input.returnPressed.connect(self.run_calculator)
-        rl.addWidget(self.calc_input)
+        self.info_box.setMaximumHeight(100)
+        self.info_box.setStyleSheet("""
+            QTextEdit {
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                padding: 5px;
+            }
+        """)
+        pt_layout.addWidget(self.info_box)
         
-        self.periodic_widget = self.add_sidebar(
-            right_container, "PT", QtCore.Qt.DockWidgetArea.RightDockWidgetArea
-        )
-        self.periodic_widget.setMinimumWidth(460)
+        # Selected elements display
+        pt_layout.addWidget(QtWidgets.QLabel("SELECTED ELEMENTS:"))
+        self.selected_elements_label = QtWidgets.QLabel("None")
+        self.selected_elements_label.setStyleSheet("""
+            QLabel {
+                background-color: #ecf0f1;
+                color: #2c3e50;
+                padding: 8px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+        """)
+        self.selected_elements_label.setWordWrap(True)
+        pt_layout.addWidget(self.selected_elements_label)
+        
+        pt_layout.addStretch()
+        self.periodic_widget.setWidget(pt_container)
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.periodic_widget)
+        self.periodic_widget.setMinimumWidth(250)
+        
+        # Sidebar 3: Calculator (Right) - Separate dock widget
+        self.calculator = CalculatorDialog(self)
+        self.calculator_widget = self.calculator
+        self.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.calculator_widget)
+        
+        # Tabify PT and Calculator on the right side
+        self.tabifyDockWidget(self.periodic_widget, self.calculator_widget)
+        self.periodic_widget.raise_()
 
     def _setup_plots(self):
         self.plot1 = QtWidgets.QWidget()
@@ -211,9 +474,18 @@ class BaseWidget(QtWidgets.QMainWindow):
         return dock
 
     def _connect_pt_buttons(self):
-        buttons = self.periodic_table.findChildren(QtWidgets.QPushButton)
-        for b in buttons:
-            b.clicked.connect(lambda checked, btn=b: self.display_element_info(btn.text()))
+        """Connect periodic table element selection signal."""
+        self.periodic_table.element_selected.connect(self.display_element_info)
+
+    def show_periodic_table(self):
+        """Show the periodic table dialog."""
+        result = self.periodic_table.exec()
+        if result == QtWidgets.QDialog.DialogCode.Accepted if hasattr(QtWidgets.QDialog, 'DialogCode') else QtWidgets.QDialog.Accepted:
+            selected = self.periodic_table.get_selected_elements()
+            if selected:
+                self.selected_elements_label.setText(', '.join(selected))
+            else:
+                self.selected_elements_label.setText("None")
 
     def save_file(self): pass
     def open_file(self): pass
@@ -224,20 +496,26 @@ class BaseWidget(QtWidgets.QMainWindow):
     def updateTab(self, n):
         self.tabCurrent = n
 
-    def display_element_info(self, raw):
-        sym = raw.strip().split()[-1] if raw.strip() else ""
-        if sym in ELEMENT_DATA:
-            d = ELEMENT_DATA[sym]
-            self.info_box.setText(f"<b>{sym}</b> ({d['number']}): {d['name']}<br>Atomic Mass: {d['mass']} u")
+    def display_element_info(self, symbol, data=None):
+        """Display element information from periodic table selection."""
+        if data is None:
+            # Legacy support - look up from ELEMENT_DATA
+            sym = symbol.strip().split()[-1] if symbol.strip() else ""
+            if sym in ELEMENT_DATA:
+                d = ELEMENT_DATA[sym]
+                self.info_box.setText(f"<b>{sym}</b> ({d['number']}): {d['name']}<br>Atomic Mass: {d['mass']} u")
+            else:
+                self.info_box.setText(f"Selection: {sym} (No data)")
         else:
-            self.info_box.setText(f"Selection: {sym} (No data)")
-
-    def run_calculator(self):
-        try:
-            val = eval(self.calc_input.text(), {"__builtins__": None}, {"np": np})
-            self.calc_input.setText(str(val))
-        except Exception:
-            self.calc_input.setText("Error")
+            # New format with data dict from periodic table
+            from .periodic_table import CATEGORY_LABELS
+            category = CATEGORY_LABELS.get(data.get('category', ''), 'Unknown')
+            self.info_box.setText(
+                f"<b>{data['name']}</b> ({symbol})<br>"
+                f"Atomic Number: {data['number']}<br>"
+                f"Atomic Mass: {data['mass']:.4f} u<br>"
+                f"Category: {category}"
+            )
 
 def main():
     app = QtWidgets.QApplication(sys.argv)
