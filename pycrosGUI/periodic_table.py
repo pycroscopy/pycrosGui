@@ -415,24 +415,30 @@ class PeriodicTable(QtWidgets.QDialog):
         return legend
         
     def _on_element_click(self, symbol):
-        """Handle element button click."""
+        """Handle element button click - single selection mode."""
         data = ELEMENTS[symbol]
         btn = self.element_buttons[symbol]
         
+        # Single selection mode: deselect all other elements first
+        for other_symbol, other_btn in self.element_buttons.items():
+            if other_symbol != symbol:
+                other_btn.setChecked(False)
+        
+        # Update selection list - only keep the current element if checked
         if btn.isChecked():
-            if symbol not in self.elements_selected:
-                self.elements_selected.append(symbol)
+            self.elements_selected = [symbol]
         else:
-            if symbol in self.elements_selected:
-                self.elements_selected.remove(symbol)
+            self.elements_selected = []
         
         # Update info panel
         category = CATEGORY_LABELS.get(data['category'], 'Unknown')
-        self.info_panel.setText(
-            f"<b>{data['name']}</b> ({symbol}) — {category}<br>"
-            f"Atomic Number: {data['number']} | Atomic Mass: {data['mass']:.4f} u<br>"
-            f"Selected elements: {', '.join(self.elements_selected) if self.elements_selected else 'None'}"
-        )
+        if self.elements_selected:
+            self.info_panel.setText(
+                f"<b>{data['name']}</b> ({symbol}) — {category}<br>"
+                f"Atomic Number: {data['number']} | Atomic Mass: {data['mass']:.4f} u"
+            )
+        else:
+            self.info_panel.setText("Click an element to see details")
         
         # Emit signal
         self.element_selected.emit(symbol, data)

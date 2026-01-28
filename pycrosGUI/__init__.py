@@ -16,6 +16,7 @@ from .peak_fit_dialog import PeakFitDialog
 from .image_dialog import ImageDialog
 from .atom_dialog import AtomDialog
 from .probe_dialog import ProbeDialog
+from .homepage import HomePage
 
 __all__ = [
     'BaseWidget', 
@@ -32,6 +33,7 @@ __all__ = [
     'ImageDialog',
     'AtomDialog',
     'ProbeDialog',
+    'HomePage',
 ]
 
 if __name__ == '__main__':

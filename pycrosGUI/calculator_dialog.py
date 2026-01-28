@@ -57,6 +57,7 @@ UNIT_CONVERSIONS = {
 class CalculatorDialog(QtWidgets.QDockWidget):
     """
     Advanced Scientific Calculator with microscopy-relevant features.
+    Supports keyboard input like Desmos.
     """
     
     def __init__(self, parent=None):
@@ -79,38 +80,44 @@ class CalculatorDialog(QtWidgets.QDockWidget):
         layout.setSpacing(5)
         layout.setContentsMargins(8, 8, 8, 8)
         
-        # Display
+        # Display - now editable for keyboard input like Desmos
         display_layout = QtWidgets.QVBoxLayout()
         
-        # Expression display (smaller, shows the expression)
-        self.expression_display = QtWidgets.QLineEdit()
-        self.expression_display.setReadOnly(True)
-        self.expression_display.setAlignment(Qt.AlignmentFlag.AlignRight if hasattr(Qt, 'AlignmentFlag') else Qt.AlignRight)
-        self.expression_display.setStyleSheet("""
+        # Expression input (editable - users can type here)
+        self.expression_input = QtWidgets.QLineEdit()
+        self.expression_input.setPlaceholderText("Type expression here (e.g., 2+3*sin(pi/4))...")
+        self.expression_input.setAlignment(Qt.AlignmentFlag.AlignLeft if hasattr(Qt, 'AlignmentFlag') else Qt.AlignLeft)
+        self.expression_input.setStyleSheet("""
             QLineEdit {
-                background-color: #2c3e50;
-                color: #95a5a6;
-                border: none;
-                border-radius: 4px;
-                padding: 5px;
-                font-size: 11px;
+                background-color: #ffffff;
+                color: #2c3e50;
+                border: 2px solid #3498db;
+                border-radius: 6px;
+                padding: 10px;
+                font-size: 14px;
                 font-family: monospace;
             }
+            QLineEdit:focus {
+                border: 2px solid #2980b9;
+                background-color: #f8f9fa;
+            }
         """)
-        display_layout.addWidget(self.expression_display)
+        self.expression_input.textChanged.connect(self._on_text_changed)
+        self.expression_input.returnPressed.connect(self._evaluate)
+        display_layout.addWidget(self.expression_input)
         
-        # Result display (larger)
+        # Result display (read-only, shows live result)
         self.result_display = QtWidgets.QLineEdit("0")
         self.result_display.setReadOnly(True)
         self.result_display.setAlignment(Qt.AlignmentFlag.AlignRight if hasattr(Qt, 'AlignmentFlag') else Qt.AlignRight)
         self.result_display.setStyleSheet("""
             QLineEdit {
-                background-color: #34495e;
-                color: #ecf0f1;
+                background-color: #2c3e50;
+                color: #2ecc71;
                 border: none;
-                border-radius: 4px;
-                padding: 10px;
-                font-size: 20px;
+                border-radius: 6px;
+                padding: 12px;
+                font-size: 22px;
                 font-weight: bold;
                 font-family: monospace;
             }
@@ -119,22 +126,28 @@ class CalculatorDialog(QtWidgets.QDockWidget):
         
         layout.addLayout(display_layout)
         
-        # Create tabs for different button groups
+        # Create tabs for different button groups - FIXED STYLING
         tab_widget = QtWidgets.QTabWidget()
         tab_widget.setStyleSheet("""
             QTabWidget::pane {
                 border: 1px solid #bdc3c7;
                 border-radius: 4px;
+                background-color: #f8f9fa;
             }
             QTabBar::tab {
                 background-color: #ecf0f1;
-                padding: 6px 12px;
+                color: #2c3e50;
+                padding: 8px 14px;
                 margin-right: 2px;
                 border-radius: 4px 4px 0 0;
+                font-weight: bold;
             }
             QTabBar::tab:selected {
                 background-color: #3498db;
                 color: white;
+            }
+            QTabBar::tab:hover:!selected {
+                background-color: #d5dbdb;
             }
         """)
         
@@ -215,7 +228,8 @@ class CalculatorDialog(QtWidgets.QDockWidget):
         """Create a styled calculator button."""
         btn = QtWidgets.QPushButton(text)
         btn.setMinimumSize(40, 35)
-        btn.clicked.connect(callback)
+        # Connect with a wrapper that ignores the 'checked' argument from clicked signal
+        btn.clicked.connect(lambda checked, cb=callback: cb())
         
         styles = {
             "default": """
@@ -338,26 +352,25 @@ class CalculatorDialog(QtWidgets.QDockWidget):
         grid.addWidget(self._create_button("⌫", self._backspace, "default"), 0, 2)
         grid.addWidget(self._create_button("÷", lambda: self._add_operator("/"), "operator"), 0, 3)
         
-        # Number rows
+        # Number rows - each button with explicit operator mapping
         numbers = [
-            ['7', '8', '9', '×'],
-            ['4', '5', '6', '-'],
-            ['1', '2', '3', '+'],
-            ['±', '0', '.', '='],
+            [('7', '7'), ('8', '8'), ('9', '9'), ('×', '*')],
+            [('4', '4'), ('5', '5'), ('6', '6'), ('-', '-')],
+            [('1', '1'), ('2', '2'), ('3', '3'), ('+', '+')],
+            [('±', '±'), ('0', '0'), ('.', '.'), ('=', '=')],
         ]
         
         for row, items in enumerate(numbers, 1):
-            for col, item in enumerate(items):
-                if item.isdigit() or item == '.':
-                    btn = self._create_button(item, lambda x=item: self._add_digit(x), "number")
-                elif item == '=':
-                    btn = self._create_button(item, self._evaluate, "equals")
-                elif item == '±':
-                    btn = self._create_button(item, self._toggle_sign, "default")
-                elif item == '×':
-                    btn = self._create_button(item, lambda: self._add_operator("*"), "operator")
+            for col, (label, value) in enumerate(items):
+                if value.isdigit() or value == '.':
+                    btn = self._create_button(label, lambda v=value: self._add_digit(v), "number")
+                elif value == '=':
+                    btn = self._create_button(label, self._evaluate, "equals")
+                elif value == '±':
+                    btn = self._create_button(label, self._toggle_sign, "default")
                 else:
-                    btn = self._create_button(item, lambda op=item: self._add_operator(op), "operator")
+                    # Operators: *, -, +
+                    btn = self._create_button(label, lambda op=value: self._add_operator(op), "operator")
                 grid.addWidget(btn, row, col)
         
         # Memory buttons
@@ -459,6 +472,16 @@ class CalculatorDialog(QtWidgets.QDockWidget):
                 border: 1px solid #bdc3c7;
                 border-radius: 4px;
                 background-color: white;
+                color: #2c3e50;
+            }
+            QComboBox::drop-down {
+                border: none;
+            }
+            QComboBox QAbstractItemView {
+                background-color: white;
+                color: #2c3e50;
+                selection-background-color: #3498db;
+                selection-color: white;
             }
         """)
         layout.addWidget(self.conversion_combo)
@@ -466,7 +489,9 @@ class CalculatorDialog(QtWidgets.QDockWidget):
         # Input/Output
         io_layout = QtWidgets.QGridLayout()
         
-        io_layout.addWidget(QtWidgets.QLabel("Input:"), 0, 0)
+        input_label = QtWidgets.QLabel("Input:")
+        input_label.setStyleSheet("color: #2c3e50; font-weight: bold;")
+        io_layout.addWidget(input_label, 0, 0)
         self.conv_input = QtWidgets.QLineEdit()
         self.conv_input.setPlaceholderText("Enter value...")
         self.conv_input.setStyleSheet("""
@@ -474,11 +499,15 @@ class CalculatorDialog(QtWidgets.QDockWidget):
                 padding: 8px;
                 border: 1px solid #bdc3c7;
                 border-radius: 4px;
+                background-color: white;
+                color: #2c3e50;
             }
         """)
         io_layout.addWidget(self.conv_input, 0, 1)
         
-        io_layout.addWidget(QtWidgets.QLabel("Result:"), 1, 0)
+        result_label = QtWidgets.QLabel("Result:")
+        result_label.setStyleSheet("color: #2c3e50; font-weight: bold;")
+        io_layout.addWidget(result_label, 1, 0)
         self.conv_output = QtWidgets.QLineEdit()
         self.conv_output.setReadOnly(True)
         self.conv_output.setStyleSheet("""
@@ -487,6 +516,7 @@ class CalculatorDialog(QtWidgets.QDockWidget):
                 border: 1px solid #bdc3c7;
                 border-radius: 4px;
                 background-color: #f8f9fa;
+                color: #2c3e50;
             }
         """)
         io_layout.addWidget(self.conv_output, 1, 1)
@@ -536,19 +566,56 @@ class CalculatorDialog(QtWidgets.QDockWidget):
         layout.addWidget(QtWidgets.QLabel(""))  # Spacer
         
         energy_group = QtWidgets.QGroupBox("Wavelength ↔ Energy")
+        energy_group.setStyleSheet("""
+            QGroupBox {
+                font-weight: bold;
+                color: #2c3e50;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                margin-top: 8px;
+                padding-top: 8px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+        """)
         energy_layout = QtWidgets.QVBoxLayout(energy_group)
         
         wl_layout = QtWidgets.QHBoxLayout()
-        wl_layout.addWidget(QtWidgets.QLabel("λ (nm):"))
+        wl_label = QtWidgets.QLabel("λ (nm):")
+        wl_label.setStyleSheet("color: #2c3e50;")
+        wl_layout.addWidget(wl_label)
         self.wavelength_input = QtWidgets.QLineEdit()
         self.wavelength_input.setPlaceholderText("wavelength")
+        self.wavelength_input.setStyleSheet("""
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                background-color: white;
+                color: #2c3e50;
+            }
+        """)
         wl_layout.addWidget(self.wavelength_input)
         energy_layout.addLayout(wl_layout)
         
         ev_layout = QtWidgets.QHBoxLayout()
-        ev_layout.addWidget(QtWidgets.QLabel("E (eV):"))
+        ev_label = QtWidgets.QLabel("E (eV):")
+        ev_label.setStyleSheet("color: #2c3e50;")
+        ev_layout.addWidget(ev_label)
         self.energy_output = QtWidgets.QLineEdit()
         self.energy_output.setReadOnly(True)
+        self.energy_output.setStyleSheet("""
+            QLineEdit {
+                padding: 6px;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                background-color: #f8f9fa;
+                color: #2c3e50;
+            }
+        """)
         ev_layout.addWidget(self.energy_output)
         energy_layout.addLayout(ev_layout)
         
@@ -575,82 +642,141 @@ class CalculatorDialog(QtWidgets.QDockWidget):
         return widget
         
     # Calculator operations
+    def _on_text_changed(self, text):
+        """Handle text changes - live evaluation like Desmos."""
+        self.current_expression = text
+        if text:
+            try:
+                result = self._safe_eval(text)
+                if isinstance(result, float):
+                    if abs(result) > 1e10 or (abs(result) < 1e-6 and result != 0):
+                        self.result_display.setText(f"{result:.6e}")
+                    else:
+                        self.result_display.setText(f"{result:.10g}")
+                else:
+                    self.result_display.setText(str(result))
+                self.result_display.setStyleSheet("""
+                    QLineEdit {
+                        background-color: #2c3e50;
+                        color: #2ecc71;
+                        border: none;
+                        border-radius: 6px;
+                        padding: 12px;
+                        font-size: 22px;
+                        font-weight: bold;
+                        font-family: monospace;
+                    }
+                """)
+            except:
+                self.result_display.setText("...")
+                self.result_display.setStyleSheet("""
+                    QLineEdit {
+                        background-color: #2c3e50;
+                        color: #95a5a6;
+                        border: none;
+                        border-radius: 6px;
+                        padding: 12px;
+                        font-size: 22px;
+                        font-weight: bold;
+                        font-family: monospace;
+                    }
+                """)
+        else:
+            self.result_display.setText("0")
+            
     def _add_digit(self, digit):
         """Add a digit to the current expression."""
-        self.current_expression += digit
-        self._update_display()
+        cursor_pos = self.expression_input.cursorPosition()
+        text = self.expression_input.text()
+        new_text = text[:cursor_pos] + digit + text[cursor_pos:]
+        self.expression_input.setText(new_text)
+        self.expression_input.setCursorPosition(cursor_pos + len(digit))
+        self.expression_input.setFocus()
         
     def _add_operator(self, op):
         """Add an operator to the expression."""
-        self.current_expression += f" {op} "
-        self._update_display()
+        cursor_pos = self.expression_input.cursorPosition()
+        text = self.expression_input.text()
+        new_text = text[:cursor_pos] + op + text[cursor_pos:]
+        self.expression_input.setText(new_text)
+        self.expression_input.setCursorPosition(cursor_pos + len(op))
+        self.expression_input.setFocus()
         
     def _add_function(self, func):
         """Add a function to the expression."""
+        insert_text = ""
         if func == 'pi':
-            self.current_expression += str(math.pi)
+            insert_text = 'pi'
         elif func == 'e':
-            self.current_expression += str(math.e)
+            insert_text = 'e'
         elif func == 'lparen':
-            self.current_expression += '('
+            insert_text = '('
         elif func == 'rparen':
-            self.current_expression += ')'
+            insert_text = ')'
         elif func == 'mod':
-            self.current_expression += ' % '
+            insert_text = '%'
         elif func == 'square':
-            self.current_expression += '**2'
+            insert_text = '^2'
         elif func == 'cube':
-            self.current_expression += '**3'
+            insert_text = '^3'
         elif func == 'pow':
-            self.current_expression += '**'
+            insert_text = '^'
         elif func == 'pow10':
-            self.current_expression = f'10**({self.current_expression})'
+            insert_text = '10^'
         elif func == 'inv':
-            self.current_expression = f'1/({self.current_expression})'
+            insert_text = '1/'
         elif func == 'fact':
-            try:
-                n = int(float(self._safe_eval(self.current_expression)))
-                self.current_expression = str(math.factorial(n))
-            except:
-                self.current_expression = "Error"
+            insert_text = 'factorial('
         elif func == 'cbrt':
-            self.current_expression = f'({self.current_expression})**(1/3)'
+            insert_text = 'cbrt('
         elif func in ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'log', 'log10', 'log2', 'exp', 'sqrt', 'abs']:
-            self.current_expression = f'math.{func}({self.current_expression})'
+            insert_text = f'{func}('
         
-        self._update_display()
+        if insert_text:
+            cursor_pos = self.expression_input.cursorPosition()
+            text = self.expression_input.text()
+            new_text = text[:cursor_pos] + insert_text + text[cursor_pos:]
+            self.expression_input.setText(new_text)
+            self.expression_input.setCursorPosition(cursor_pos + len(insert_text))
+            self.expression_input.setFocus()
         
     def _insert_constant(self, key):
         """Insert a physical constant value."""
-        self.current_expression += str(CONSTANTS[key])
-        self._update_display()
+        cursor_pos = self.expression_input.cursorPosition()
+        text = self.expression_input.text()
+        value_str = str(CONSTANTS[key])
+        new_text = text[:cursor_pos] + value_str + text[cursor_pos:]
+        self.expression_input.setText(new_text)
+        self.expression_input.setCursorPosition(cursor_pos + len(value_str))
+        self.expression_input.setFocus()
         
     def _toggle_sign(self):
-        """Toggle the sign of the current number."""
-        if self.current_expression:
-            if self.current_expression.startswith('-'):
-                self.current_expression = self.current_expression[1:]
+        """Toggle the sign of the expression."""
+        text = self.expression_input.text()
+        if text:
+            if text.startswith('-'):
+                self.expression_input.setText(text[1:])
             else:
-                self.current_expression = '-' + self.current_expression
-            self._update_display()
+                self.expression_input.setText('-' + text)
+        self.expression_input.setFocus()
             
     def _clear(self):
         """Clear all."""
-        self.current_expression = ""
+        self.expression_input.clear()
         self.result_display.setText("0")
-        self.expression_display.setText("")
+        self.current_expression = ""
+        self.expression_input.setFocus()
         
     def _clear_entry(self):
         """Clear current entry."""
+        self.expression_input.clear()
         self.current_expression = ""
-        self._update_display()
+        self.expression_input.setFocus()
         
     def _backspace(self):
         """Remove last character."""
-        self.current_expression = self.current_expression.rstrip()
-        if self.current_expression:
-            self.current_expression = self.current_expression[:-1]
-        self._update_display()
+        self.expression_input.backspace()
+        self.expression_input.setFocus()
         
     def _memory_clear(self):
         """Clear memory."""
@@ -676,33 +802,84 @@ class CalculatorDialog(QtWidgets.QDockWidget):
             pass
             
     def _safe_eval(self, expr):
-        """Safely evaluate a mathematical expression."""
+        """Safely evaluate a mathematical expression with natural syntax like Desmos."""
+        import re
+        
+        # Normalize the expression
+        expr = expr.strip()
+        if not expr:
+            raise ValueError("Empty expression")
+        
         # Replace display operators with Python operators
-        expr = expr.replace('×', '*').replace('÷', '/')
+        expr = expr.replace('×', '*').replace('÷', '/').replace('−', '-')
+        
+        # Replace ^ with ** for exponentiation
+        expr = expr.replace('^', '**')
+        
+        # List of function names to protect from implicit multiplication
+        func_names = ['sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sinh', 'cosh', 'tanh',
+                      'log', 'log10', 'log2', 'exp', 'sqrt', 'cbrt', 'abs', 'floor', 'ceil',
+                      'round', 'factorial', 'ln']
+        
+        # Replace common function names (case insensitive)
+        # ln -> log (natural log)
+        expr = re.sub(r'\bln\b', 'log', expr, flags=re.IGNORECASE)
+        
+        # Add implicit multiplication: 2pi -> 2*pi, 3(4) -> 3*(4), (2)(3) -> (2)*(3)
+        # But NOT after function names like sin, cos, etc.
+        
+        # First, temporarily replace function names with placeholders
+        placeholders = {}
+        for i, func in enumerate(func_names):
+            placeholder = f"__FUNC{i}__"
+            placeholders[placeholder] = func
+            expr = re.sub(rf'\b{func}\b', placeholder, expr, flags=re.IGNORECASE)
+        
+        # Number followed by letter (but not already a placeholder) or opening paren
+        expr = re.sub(r'(\d)([a-zA-Z(])', r'\1*\2', expr)
+        # Closing paren followed by opening paren or letter or number
+        expr = re.sub(r'(\))([a-zA-Z0-9(])', r'\1*\2', expr)
+        
+        # Restore function names
+        for placeholder, func in placeholders.items():
+            # Remove any * that got inserted between function and its opening paren
+            expr = expr.replace(f"{placeholder}*(", f"{func}(")
+            expr = expr.replace(placeholder, func)
+        
+        # Define cube root function
+        def cbrt(x):
+            if x >= 0:
+                return x ** (1/3)
+            else:
+                return -((-x) ** (1/3))
         
         # Only allow safe operations
         allowed_names = {
-            'math': math,
             'sin': math.sin, 'cos': math.cos, 'tan': math.tan,
             'asin': math.asin, 'acos': math.acos, 'atan': math.atan,
+            'sinh': math.sinh, 'cosh': math.cosh, 'tanh': math.tanh,
             'log': math.log, 'log10': math.log10, 'log2': math.log2,
-            'exp': math.exp, 'sqrt': math.sqrt, 'abs': abs,
+            'exp': math.exp, 'sqrt': math.sqrt, 'cbrt': cbrt,
+            'abs': abs, 'floor': math.floor, 'ceil': math.ceil,
+            'round': round,
             'pi': math.pi, 'e': math.e,
             'pow': pow, 'factorial': math.factorial,
         }
         
         try:
-            return eval(expr, {"__builtins__": {}}, allowed_names)
+            result = eval(expr, {"__builtins__": {}}, allowed_names)
+            return result
         except Exception as e:
             raise ValueError(str(e))
             
     def _evaluate(self):
-        """Evaluate the current expression."""
-        if not self.current_expression:
+        """Evaluate the current expression and add to history."""
+        expr = self.expression_input.text().strip()
+        if not expr:
             return
             
         try:
-            result = self._safe_eval(self.current_expression)
+            result = self._safe_eval(expr)
             
             # Format result
             if isinstance(result, float):
@@ -714,41 +891,41 @@ class CalculatorDialog(QtWidgets.QDockWidget):
                 result_str = str(result)
             
             # Add to history
-            history_entry = f"{self.current_expression} = {result_str}"
+            history_entry = f"{expr} = {result_str}"
             self.history.append(history_entry)
             self.history_list.addItem(history_entry)
             self.history_list.scrollToBottom()
             
             self.last_result = result
             self.result_display.setText(result_str)
-            self.expression_display.setText(self.current_expression)
-            self.current_expression = result_str
+            
+            # Set the result as the new expression for continued calculation
+            self.expression_input.setText(result_str)
+            self.expression_input.selectAll()
             
         except Exception as e:
             self.result_display.setText("Error")
-            self.expression_display.setText(str(e))
+            self.result_display.setStyleSheet("""
+                QLineEdit {
+                    background-color: #2c3e50;
+                    color: #e74c3c;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 12px;
+                    font-size: 22px;
+                    font-weight: bold;
+                    font-family: monospace;
+                }
+            """)
             
-    def _update_display(self):
-        """Update the expression display."""
-        self.expression_display.setText(self.current_expression if self.current_expression else "")
-        if self.current_expression:
-            # Try to show live evaluation
-            try:
-                result = self._safe_eval(self.current_expression)
-                if isinstance(result, float):
-                    self.result_display.setText(f"{result:.10g}")
-                else:
-                    self.result_display.setText(str(result))
-            except:
-                pass
-                
     def _use_history_item(self, item):
-        """Use a history item's result."""
+        """Use a history item - set expression to the equation."""
         text = item.text()
         if '=' in text:
-            result = text.split('=')[-1].strip()
-            self.current_expression = result
-            self._update_display()
+            # Get the expression part (before the =)
+            expr = text.split('=')[0].strip()
+            self.expression_input.setText(expr)
+            self.expression_input.setFocus()
             
     def _clear_history(self):
         """Clear calculation history."""

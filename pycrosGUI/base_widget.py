@@ -133,6 +133,15 @@ class BaseWidget(QtWidgets.QMainWindow):
         # File menu
         self.file_menu = menubar.addMenu('File')
         
+        # Home action - return to homepage
+        home_action = QtWidgets.QAction('Home', self)
+        home_action.setShortcut('Ctrl+H')
+        home_action.setStatusTip('Return to homepage')
+        home_action.triggered.connect(self.return_to_home)
+        self.file_menu.addAction(home_action)
+        
+        self.file_menu.addSeparator()
+        
         open_action = QtWidgets.QAction('Open', self)
         open_action.setShortcut('Ctrl+O')
         open_action.triggered.connect(self.open_file)
@@ -142,6 +151,12 @@ class BaseWidget(QtWidgets.QMainWindow):
         save_action.setShortcut('Ctrl+S')
         save_action.triggered.connect(self.save_file)
         self.file_menu.addAction(save_action)
+        
+        save_image_action = QtWidgets.QAction('Save Image', self)
+        save_image_action.setShortcut('Ctrl+Shift+S')
+        save_image_action.setStatusTip('Save current plot/image as image file')
+        save_image_action.triggered.connect(self.save_image)
+        self.file_menu.addAction(save_image_action)
         
         self.file_menu.addSeparator()
         
@@ -343,21 +358,138 @@ class BaseWidget(QtWidgets.QMainWindow):
             QtWidgets.QMainWindow.DockOption.AllowTabbedDocks
         )
 
+        # Modern consistent styling
         self.setStyleSheet("""
-            QMainWindow { background-color: #2c3e50; }
-            QTabWidget::pane { border: 1px solid #34495e; background: #ecf0f1; border-radius: 4px; }
-            QLineEdit, QTextEdit { background-color: #ffffff; color: #000000; border: 1px solid #bdc3c7; }
-            QLabel { color: #ecf0f1; font-weight: bold; font-size: 10px; }
-            
-            QPushButton { 
-                background-color: #95a5a6; color: #000000; 
-                border: 1px solid #7f8c8d; border-radius: 0px; 
-                font-weight: bold; font-size: 9px;
-                margin: 0px; padding: 1px;
+            QMainWindow {
+                background-color: #2c3e50;
             }
-            QPushButton:hover { background-color: #bdc3c7; }
-            QDockWidget { color: #ecf0f1; font-weight: bold; font-size: 10px; }
-            QDockWidget::title { background: #34495e; padding: 2px; }
+            QMenuBar {
+                background-color: #34495e;
+                color: #ecf0f1;
+                padding: 4px;
+                font-size: 13px;
+            }
+            QMenuBar::item {
+                background-color: transparent;
+                padding: 6px 12px;
+                border-radius: 4px;
+            }
+            QMenuBar::item:selected {
+                background-color: #3498db;
+            }
+            QMenu {
+                background-color: #34495e;
+                color: #ecf0f1;
+                border: 1px solid #2c3e50;
+                padding: 5px;
+            }
+            QMenu::item {
+                padding: 8px 25px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #3498db;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: #7f8c8d;
+                margin: 5px 10px;
+            }
+            QTabWidget::pane {
+                border: 1px solid #34495e;
+                background: #ecf0f1;
+                border-radius: 6px;
+            }
+            QTabBar::tab {
+                background-color: #34495e;
+                color: #bdc3c7;
+                padding: 10px 20px;
+                margin-right: 2px;
+                border-radius: 6px 6px 0 0;
+                font-weight: bold;
+            }
+            QTabBar::tab:selected {
+                background-color: #3498db;
+                color: white;
+            }
+            QTabBar::tab:hover:!selected {
+                background-color: #4a6278;
+            }
+            QDockWidget {
+                color: #ecf0f1;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QDockWidget::title {
+                background: #34495e;
+                padding: 8px;
+                border-radius: 4px 4px 0 0;
+            }
+            QDockWidget::close-button, QDockWidget::float-button {
+                background: #3498db;
+                border-radius: 3px;
+                padding: 2px;
+            }
+            QDockWidget::close-button:hover, QDockWidget::float-button:hover {
+                background: #e74c3c;
+            }
+            QLineEdit, QTextEdit {
+                background-color: #ffffff;
+                color: #2c3e50;
+                border: 1px solid #bdc3c7;
+                border-radius: 4px;
+                padding: 6px;
+            }
+            QLabel {
+                color: #ecf0f1;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background-color: #2980b9;
+            }
+            QPushButton:pressed {
+                background-color: #1f6aa5;
+            }
+            QScrollBar:vertical {
+                background: #34495e;
+                width: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background: #7f8c8d;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background: #95a5a6;
+            }
+            QScrollBar:horizontal {
+                background: #34495e;
+                height: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:horizontal {
+                background: #7f8c8d;
+                border-radius: 6px;
+                min-width: 20px;
+            }
+            QScrollBar::add-line, QScrollBar::sub-line {
+                background: none;
+            }
+            QStatusBar {
+                background-color: #34495e;
+                color: #ecf0f1;
+            }
         """)
 
         if self.periodic_table.layout():
@@ -487,8 +619,215 @@ class BaseWidget(QtWidgets.QMainWindow):
             else:
                 self.selected_elements_label.setText("None")
 
-    def save_file(self): pass
-    def open_file(self): pass
+    def save_file(self):
+        """Save the current dataset to a file."""
+        if self.dataset is None:
+            QtWidgets.QMessageBox.warning(self, "No Data", "No dataset to save.")
+            return
+            
+        file_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Dataset",
+            self.dir_name,
+            "HDF5 Files (*.h5 *.hdf5);;NumPy Files (*.npy *.npz);;All Files (*)"
+        )
+        
+        if file_path:
+            try:
+                self.dir_name = os.path.dirname(file_path)
+                if file_path.endswith('.npy'):
+                    np.save(file_path, self.dataset)
+                elif file_path.endswith('.npz'):
+                    np.savez(file_path, data=self.dataset)
+                else:
+                    # Default to npz for other extensions
+                    if not file_path.endswith('.npz'):
+                        file_path += '.npz'
+                    np.savez(file_path, data=self.dataset)
+                QtWidgets.QMessageBox.information(self, "Saved", f"Dataset saved to:\n{file_path}")
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save file:\n{str(e)}")
+    
+    def open_file(self):
+        """Open a data file (images, spectra, HDF5, etc.)."""
+        file_path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self,
+            "Open Data File",
+            self.dir_name,
+            "All Supported (*.h5 *.hdf5 *.npy *.npz *.tif *.tiff *.png *.jpg *.jpeg *.dm3 *.dm4);;"
+            "HDF5 Files (*.h5 *.hdf5);;"
+            "NumPy Files (*.npy *.npz);;"
+            "Image Files (*.tif *.tiff *.png *.jpg *.jpeg);;"
+            "Digital Micrograph (*.dm3 *.dm4);;"
+            "All Files (*)"
+        )
+        
+        if file_path:
+            try:
+                self.dir_name = os.path.dirname(file_path)
+                self._load_file(file_path)
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Error", f"Failed to open file:\n{str(e)}")
+    
+    def _load_file(self, file_path):
+        """Load a file and add it to datasets."""
+        import os
+        filename = os.path.basename(file_path)
+        ext = os.path.splitext(file_path)[1].lower()
+        
+        data = None
+        data_name = filename
+        
+        if ext in ['.npy']:
+            data = np.load(file_path, allow_pickle=True)
+        elif ext in ['.npz']:
+            loaded = np.load(file_path, allow_pickle=True)
+            # Get the first array in the npz file
+            keys = list(loaded.keys())
+            if keys:
+                data = loaded[keys[0]]
+        elif ext in ['.tif', '.tiff', '.png', '.jpg', '.jpeg']:
+            # Load image using Qt
+            from PIL import Image
+            img = Image.open(file_path)
+            data = np.array(img)
+        elif ext in ['.h5', '.hdf5']:
+            # Try to load HDF5
+            try:
+                import h5py
+                with h5py.File(file_path, 'r') as f:
+                    # Get first dataset
+                    def get_first_dataset(group):
+                        for key in group.keys():
+                            item = group[key]
+                            if isinstance(item, h5py.Dataset):
+                                return np.array(item)
+                            elif isinstance(item, h5py.Group):
+                                result = get_first_dataset(item)
+                                if result is not None:
+                                    return result
+                        return None
+                    data = get_first_dataset(f)
+            except ImportError:
+                QtWidgets.QMessageBox.warning(self, "Missing Package", "h5py is required to open HDF5 files.\nInstall with: pip install h5py")
+                return
+        elif ext in ['.dm3', '.dm4']:
+            # Try to load Digital Micrograph files
+            try:
+                import hyperspy.api as hs
+                s = hs.load(file_path)
+                data = s.data
+            except ImportError:
+                QtWidgets.QMessageBox.warning(self, "Missing Package", "hyperspy is required to open DM files.\nInstall with: pip install hyperspy")
+                return
+        
+        if data is not None:
+            # Add to datasets
+            self.datasets[data_name] = data
+            self.main = data_name
+            self.dataset = data
+            
+            # Update UI
+            self.update_DataDialog()
+            
+            # Display based on data dimensions
+            if data.ndim == 1:
+                # 1D spectrum
+                self.plot_param_window.clear()
+                self.plot_param_window.plot(data, pen='b')
+                self.tab.setCurrentIndex(0)  # Spectrum tab
+            elif data.ndim == 2:
+                # 2D image
+                self.image_item.setImage(data)
+                self.tab.setCurrentIndex(2)  # Image tab
+            elif data.ndim >= 3:
+                # Spectral image or 3D+ data
+                self.image_item.setImage(data)
+                self.tab.setCurrentIndex(2)
+            
+            # Update data dialog lists
+            if hasattr(self.data_dialog, 'spectrum_list') and data.ndim == 1:
+                if self.data_dialog.spectrum_list.item(0).text() == "None":
+                    self.data_dialog.spectrum_list.clear()
+                self.data_dialog.spectrum_list.addItem(data_name)
+            elif hasattr(self.data_dialog, 'image_list') and data.ndim >= 2:
+                if self.data_dialog.image_list.item(0).text() == "None":
+                    self.data_dialog.image_list.clear()
+                self.data_dialog.image_list.addItem(data_name)
+                
+            QtWidgets.QMessageBox.information(self, "Loaded", f"Loaded: {data_name}\nShape: {data.shape}")
+        else:
+            QtWidgets.QMessageBox.warning(self, "Load Failed", f"Could not load data from:\n{file_path}")
+    
+    def save_image(self):
+        """Save the current plot or image view as an image file."""
+        file_path, selected_filter = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Save Image",
+            self.dir_name,
+            "PNG Image (*.png);;JPEG Image (*.jpg *.jpeg);;TIFF Image (*.tiff *.tif);;PDF Document (*.pdf);;SVG Vector (*.svg)"
+        )
+        
+        if file_path:
+            try:
+                self.dir_name = os.path.dirname(file_path)
+                
+                # Determine which widget to export based on current tab
+                current_tab = self.tab.currentIndex()
+                
+                if current_tab == 0:  # Spectrum tab
+                    exporter = pg.exporters.ImageExporter(self.plot_param_window.plotItem)
+                elif current_tab == 1:  # Spectral Image tab
+                    exporter = pg.exporters.ImageExporter(self.si_plot.plotItem)
+                elif current_tab == 2:  # Image tab
+                    exporter = pg.exporters.ImageExporter(self.image_item.imageItem)
+                else:
+                    exporter = pg.exporters.ImageExporter(self.plot_param_window.plotItem)
+                
+                # Add extension if not present
+                if not any(file_path.lower().endswith(ext) for ext in ['.png', '.jpg', '.jpeg', '.tiff', '.tif', '.pdf', '.svg']):
+                    file_path += '.png'
+                
+                exporter.export(file_path)
+                QtWidgets.QMessageBox.information(self, "Saved", f"Image saved to:\n{file_path}")
+            except Exception as e:
+                QtWidgets.QMessageBox.critical(self, "Error", f"Failed to save image:\n{str(e)}")
+    
+    def return_to_home(self):
+        """Return to the homepage."""
+        reply = QtWidgets.QMessageBox.question(
+            self, 
+            "Return to Home",
+            "Return to the homepage?\nUnsaved changes will be lost.",
+            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No
+            if hasattr(QtWidgets.QMessageBox, 'StandardButton') 
+            else QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No
+        )
+        
+        yes_button = QtWidgets.QMessageBox.StandardButton.Yes if hasattr(QtWidgets.QMessageBox, 'StandardButton') else QtWidgets.QMessageBox.Yes
+        
+        if reply == yes_button:
+            # Signal to return home - will be connected by Application class
+            self.close()
+            # Import and show homepage
+            from .homepage import HomePage
+            from .version import __version__
+            self._homepage = HomePage(version=__version__)
+            self._homepage.enter_app.connect(self._relaunch_main)
+            self._homepage.resize(900, 700)
+            self._homepage.show()
+    
+    def _relaunch_main(self):
+        """Relaunch the main application from homepage."""
+        if hasattr(self, '_homepage'):
+            self._homepage.close()
+        # Create new main window
+        new_window = BaseWidget()
+        new_window.resize(1280, 800)
+        new_window.show()
+        # Store reference to prevent garbage collection
+        self._new_main = new_window
+
     def remove_dataset(self): pass
     def update_DataDialog(self):
         if hasattr(self.data_dialog, 'update_sidebar'): self.data_dialog.update_sidebar()

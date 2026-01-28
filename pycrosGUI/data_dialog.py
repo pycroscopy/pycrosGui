@@ -1,7 +1,7 @@
 """
 #####################################################################
 #
-# Part of pycrosGui
+# Part of pycrosGui - Data Dialog with modern styling
 #####################################################################
 """
 
@@ -15,8 +15,24 @@ except ImportError:
     ShiftModifier = QtCore.Qt.ShiftModifier
     ControlModifier = QtCore.Qt.ControlModifier
 
+
+# Consistent color palette
+COLORS = {
+    'primary': '#3498db',
+    'primary_hover': '#2980b9',
+    'secondary': '#2c3e50',
+    'background': '#f8f9fa',
+    'text': '#2c3e50',
+    'text_light': '#7f8c8d',
+    'border': '#bdc3c7',
+    'success': '#27ae60',
+    'danger': '#e74c3c',
+    'warning': '#f39c12',
+}
+
+
 class DataDialog(QtWidgets.QWidget):
-    """Data dialog for displaying and managing data."""
+    """Data dialog for displaying and managing data with modern styling."""
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -26,68 +42,144 @@ class DataDialog(QtWidgets.QWidget):
         self.setLayout(layout)
         self.name = 'Data'
         self.setWindowTitle(self.name)
+        
+        # Apply modern styling
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {COLORS['background']};
+                color: {COLORS['text']};
+            }}
+            QLabel {{
+                color: {COLORS['text']};
+                font-weight: bold;
+                font-size: 12px;
+                padding: 5px 0;
+            }}
+            QListWidget {{
+                background-color: white;
+                border: 1px solid {COLORS['border']};
+                border-radius: 6px;
+                padding: 5px;
+                color: {COLORS['text']};
+                font-size: 11px;
+            }}
+            QListWidget::item {{
+                padding: 8px;
+                border-radius: 4px;
+            }}
+            QListWidget::item:selected {{
+                background-color: {COLORS['primary']};
+                color: white;
+            }}
+            QListWidget::item:hover:!selected {{
+                background-color: #ecf0f1;
+            }}
+            QPushButton {{
+                background-color: {COLORS['primary']};
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 16px;
+                font-weight: bold;
+                font-size: 11px;
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS['primary_hover']};
+            }}
+            QPushButton:pressed {{
+                background-color: #1f6aa5;
+            }}
+        """)
 
     def get_sidbar(self):
         """Create the sidebar layout."""
-        layout = QtWidgets.QGridLayout()
+        layout = QtWidgets.QVBoxLayout()
+        layout.setSpacing(8)
+        layout.setContentsMargins(10, 10, 10, 10)
 
-        row = 0
+        # Spectral Data section
         label = QtWidgets.QLabel("Spectral Data")
-        layout.addWidget(label, row, 0)
-
-        row += 1
+        layout.addWidget(label)
+        
         self.spectrum_list = QtWidgets.QListWidget()
         self.spectrum_list.addItems(["None"])
-        layout.addWidget(self.spectrum_list, row, 0, 1, 3)
+        self.spectrum_list.setMinimumHeight(80)
+        layout.addWidget(self.spectrum_list)
         self.spectrum_list.itemClicked.connect(self.plot_update)
 
-        row += 1
+        # Survey Data section
         label = QtWidgets.QLabel("Survey Data")
-        layout.addWidget(label, row, 0)
-        row += 1
+        layout.addWidget(label)
+        
         self.survey_list = QtWidgets.QListWidget()
         self.survey_list.addItems(["None"])
-        layout.addWidget(self.survey_list,  row, 0, 1, 3)
+        self.survey_list.setMinimumHeight(80)
+        layout.addWidget(self.survey_list)
         self.survey_list.itemClicked.connect(self.plot_update)
 
-        row += 1
-        label =  QtWidgets.QLabel("Image Data")
-        layout.addWidget(label,  row, 0)
-
-        row += 1
+        # Image Data section
+        label = QtWidgets.QLabel("Image Data")
+        layout.addWidget(label)
+        
         self.image_list = QtWidgets.QListWidget()
         self.image_list.addItems(["None"])
-        layout.addWidget(self.image_list,  row, 0, 1, 3)
+        self.image_list.setMinimumHeight(80)
+        layout.addWidget(self.image_list)
         self.image_list.itemClicked.connect(self.plot_update)
 
-        row += 1
-        label =  QtWidgets.QLabel("Structures")
-        layout.addWidget(label,  row, 0)
-
-        row += 1
+        # Structures section
+        label = QtWidgets.QLabel("Structures")
+        layout.addWidget(label)
+        
         self.structure_list = QtWidgets.QListWidget()
         self.structure_list.addItems(["None"])
-        layout.addWidget(self.structure_list,  row, 0, 1, 3)
-        #self.structure_list.itemClicked.connect(self.plot_update)
+        self.structure_list.setMinimumHeight(80)
+        layout.addWidget(self.structure_list)
 
-        row += 1
-        self.clear_button = QtWidgets.QPushButton()
-        self.clear_button.setText("Clear All")
-        self.clear_button.setCheckable(False)
-        layout.addWidget(self.clear_button,  row, 0)
+        layout.addStretch()
+
+        # Button row
+        btn_layout = QtWidgets.QHBoxLayout()
+        btn_layout.setSpacing(8)
+        
+        self.clear_button = QtWidgets.QPushButton("Clear All")
+        self.clear_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['danger']};
+            }}
+            QPushButton:hover {{
+                background-color: #c0392b;
+            }}
+        """)
         self.clear_button.clicked.connect(self.clear_all)
+        btn_layout.addWidget(self.clear_button)
 
-        self.remove_button = QtWidgets.QPushButton()
-        self.remove_button.setText("Remove")
-        self.remove_button.setCheckable(False)
-        layout.addWidget(self.remove_button,  row, 1)
+        self.remove_button = QtWidgets.QPushButton("Remove")
+        self.remove_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['warning']};
+            }}
+            QPushButton:hover {{
+                background-color: #e67e22;
+            }}
+        """)
         self.remove_button.clicked.connect(self.remove)
+        btn_layout.addWidget(self.remove_button)
 
-        self.save_button = QtWidgets.QPushButton()
-        self.save_button.setText("Save")
-        self.save_button.setCheckable(False)
-        layout.addWidget(self.save_button,  row, 1)
+        self.save_button = QtWidgets.QPushButton("Save")
+        self.save_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['success']};
+            }}
+            QPushButton:hover {{
+                background-color: #219a52;
+            }}
+        """)
         self.save_button.clicked.connect(self.parent.save_file)
+        btn_layout.addWidget(self.save_button)
+        
+        layout.addLayout(btn_layout)
+        
         return layout
 
     def update_sidebar(self):
