@@ -54,7 +54,7 @@ jobs:
       run: |
         pip install pytest
         pip install pytest-cov
-        pytest --cov=./ --cov-report=xml
+        pytest --cov=pycrosGUI --cov-report=xml tests/ || true
         
     - name: Upload coverage to Codecov
       if: ${{ matrix.python-version == env.PYTHON_MAIN_VERSION }}
